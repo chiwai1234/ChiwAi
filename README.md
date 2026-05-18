@@ -1,1 +1,294 @@
-# ChiwAi
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChiwAi</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:24px 16px 40px;
+    background:#f7f1eb;
+    color:#5b341d;
+    font-family:
+    "Hiragino Maru Gothic ProN",
+    "Arial Rounded MT Bold",
+    "Yu Gothic",
+    sans-serif;
+}
+
+.container{
+    max-width:420px;
+    margin:auto;
+}
+
+.card{
+    background:#fff;
+    border:2px solid #f2c8d2;
+    border-radius:34px;
+    padding:42px 26px 36px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.06);
+}
+
+.company{
+    text-align:center;
+    font-size:18px;
+    color:#9c6c50;
+    letter-spacing:1px;
+    margin-bottom:34px;
+}
+
+.position{
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+    color:#7a4a2d;
+    margin-bottom:14px;
+}
+
+.name{
+    text-align:center;
+    font-size:44px;
+    font-weight:bold;
+    letter-spacing:4px;
+    margin-bottom:28px;
+    line-height:1.3;
+}
+
+.line{
+    width:90px;
+    height:4px;
+    background:#f4a8b8;
+    border-radius:999px;
+    margin:0 auto 30px;
+}
+
+.catch{
+    text-align:center;
+    font-size:17px;
+    line-height:2;
+    color:#7b5a46;
+    margin-bottom:34px;
+}
+
+.services{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+.service{
+    background:#fff7f8;
+    border:1px solid #f7d7de;
+    border-radius:18px;
+    padding:16px;
+    line-height:1.8;
+    font-size:16px;
+}
+
+.service span{
+    color:#f59aaa;
+    font-weight:bold;
+}
+
+.button{
+    display:block;
+    margin-top:34px;
+    text-align:center;
+    background:linear-gradient(135deg,#f59aaa,#f28ca0);
+    color:#fff;
+    text-decoration:none;
+    padding:18px;
+    border-radius:999px;
+    font-size:20px;
+    font-weight:bold;
+    box-shadow:0 10px 22px rgba(245,154,170,0.35);
+}
+
+.footer-links{
+    margin-top:28px;
+    text-align:center;
+    font-size:10px;
+    line-height:1.8;
+}
+
+.footer-links button{
+    border:none;
+    background:none;
+    color:#8f6a56;
+    cursor:pointer;
+    font-size:10px;
+    font-family:inherit;
+}
+
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.72);
+    z-index:9999;
+    padding:14px;
+}
+
+.modal-content{
+    background:#fff;
+    border-radius:22px;
+    width:100%;
+    max-width:900px;
+    height:92vh;
+    overflow:auto;
+    margin:auto;
+    padding:24px;
+    color:#333;
+    line-height:1.9;
+}
+
+.close-btn{
+    position:sticky;
+    top:0;
+    float:right;
+    border:none;
+    background:#f59aaa;
+    color:#fff;
+    padding:10px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    font-family:inherit;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    border-bottom:1px solid #eee;
+    padding:14px 10px;
+    text-align:left;
+    vertical-align:top;
+}
+
+@media(max-width:480px){
+
+    .name{
+        font-size:36px;
+    }
+
+    .position{
+        font-size:22px;
+    }
+
+    .catch{
+        font-size:16px;
+    }
+
+    th,td{
+        display:block;
+        width:100%;
+    }
+
+    th{
+        border-bottom:none;
+        padding-bottom:4px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<div class="company">
+ChiwAi
+</div>
+
+<div class="position">
+代表
+</div>
+
+<div class="name">
+増村 憲一
+</div>
+
+<div class="line"></div>
+
+<div class="catch">
+犬と人、そしてAI。<br>
+新しい暮らしのカタチを提案します。<br><br>
+
+〒163-1302<br>
+東京都新宿区西新宿6-5-1<br>
+新宿アイランドタワー2F
+</div>
+
+<div class="services">
+
+<div class="service">
+<span>🐾</span>
+愛犬との毎日をもっと快適に
+</div>
+
+<div class="service">
+<span>🐾</span>
+AI活用で仕事効率をサポート
+</div>
+
+<div class="service">
+<span>🐾</span>
+犬好きのための便利グッズ開発
+</div>
+
+</div>
+
+<a class="button" href="https://lin.ee/xyg9hNa">
+ChiwAi公式LINE
+</a>
+
+<div class="footer-links">
+
+<button type="button" onclick="openModal('lawModal')">
+特定商取引法表記
+</button>
+
+|
+
+<button onclick="openModal('policyModal')">
+プライバシーポリシー
+</button>
+
+|
+
+<button onclick="openModal('termsModal')">
+利用規約
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+function openModal(id){
+ document.getElementById(id).style.display='block';
+}
+
+function closeModal(id){
+ document.getElementById(id).style.display='none';
+}
+
+</script>
+
+</body>
+</html>
