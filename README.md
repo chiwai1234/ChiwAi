@@ -1,294 +1,55 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChiwAi</title>
+# マンション巡回チェック
 
-<style>
+マンションの巡回業務を記録し、リーダーが状況を把握・集計できる、インストール不要の Web ツールです。
+`index.html` 1 枚で完結し、GitHub Pages 上でそのまま動作します。
 
-*{
-    box-sizing:border-box;
-}
+- 公開URL: https://chiwai.jp/
 
-body{
-    margin:0;
-    padding:24px 16px 40px;
-    background:#f7f1eb;
-    color:#5b341d;
-    font-family:
-    "Hiragino Maru Gothic ProN",
-    "Arial Rounded MT Bold",
-    "Yu Gothic",
-    sans-serif;
-}
+## 特長
 
-.container{
-    max-width:420px;
-    margin:auto;
-}
+- **サーバー不要・インストール不要** — スマートフォンのブラウザで開くだけ。
+- **データは端末内に保存** — 記録はブラウザの `localStorage` に保存されます（外部送信なし）。
+- **CSV 書き出し** — 巡回記録を CSV でダウンロードし、リーダーが Excel 等で集計・保管できます（Excel 日本語対応の BOM 付き UTF-8）。
 
-.card{
-    background:#fff;
-    border:2px solid #f2c8d2;
-    border-radius:34px;
-    padding:42px 26px 36px;
-    box-shadow:0 10px 28px rgba(0,0,0,0.06);
-}
+## 画面構成
 
-.company{
-    text-align:center;
-    font-size:18px;
-    color:#9c6c50;
-    letter-spacing:1px;
-    margin-bottom:34px;
-}
+### 1. 巡回入力
+- マンション名・巡回者名・巡回日・時間帯を入力。
+- 各チェックポイントを「異常なし / 要確認 / 異常あり」で記録。状態を選ぶと時刻が自動で記録されます。
+- 異常内容や気づきをメモとして残せます。
+- 上部に「異常なし / 要確認 / 異常あり / 未チェック」の件数をリアルタイム表示。
+- 全体所見・引き継ぎ欄あり。
 
-.position{
-    text-align:center;
-    font-size:24px;
-    font-weight:bold;
-    color:#7a4a2d;
-    margin-bottom:14px;
-}
+### 2. 記録・集計（リーダー向け）
+- 巡回記録数・要確認あり・異常ありの件数をサマリー表示。
+- マンション名 / 日付 / ステータスで絞り込み。
+- 記録をタップすると各チェックポイントの詳細を確認できます。
+- **CSV 書き出し**ボタンで、絞り込み中の記録をダウンロード。
 
-.name{
-    text-align:center;
-    font-size:44px;
-    font-weight:bold;
-    letter-spacing:4px;
-    margin-bottom:28px;
-    line-height:1.3;
-}
+### 3. 設定
+- チェックポイントの追加・名称変更・並べ替え・削除が可能（物件に合わせてカスタマイズ）。
+- 初期リストへのリセット。
+- 全記録の削除（CSV 書き出し後の運用を想定）。
 
-.line{
-    width:90px;
-    height:4px;
-    background:#f4a8b8;
-    border-radius:999px;
-    margin:0 auto 30px;
-}
+## 初期チェックポイント（マンション想定）
 
-.catch{
-    text-align:center;
-    font-size:17px;
-    line-height:2;
-    color:#7b5a46;
-    margin-bottom:34px;
-}
+エントランス・オートロック / 共用廊下・階段 / エレベーター / ゴミ置き場・ダストボックス /
+駐輪場 / 駐車場 / メールボックス / 掲示板・掲示物 / 共用照明・電灯 /
+消火設備・消火器 / 屋上・非常階段 / 植栽・外構・敷地周り
 
-.services{
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-}
+## 運用の流れ（例）
 
-.service{
-    background:#fff7f8;
-    border:1px solid #f7d7de;
-    border-radius:18px;
-    padding:16px;
-    line-height:1.8;
-    font-size:16px;
-}
+1. 巡回者が現地でスマホから各箇所をチェックして保存。
+2. リーダーが「記録・集計」タブでサマリーと異常内容を確認。
+3. 定期的に CSV を書き出して保管・集計。必要に応じて端末の記録を削除。
 
-.service span{
-    color:#f59aaa;
-    font-weight:bold;
-}
+## CSV の列
 
-.button{
-    display:block;
-    margin-top:34px;
-    text-align:center;
-    background:linear-gradient(135deg,#f59aaa,#f28ca0);
-    color:#fff;
-    text-decoration:none;
-    padding:18px;
-    border-radius:999px;
-    font-size:20px;
-    font-weight:bold;
-    box-shadow:0 10px 22px rgba(245,154,170,0.35);
-}
+`巡回日, 時間帯, マンション名, 巡回者, チェックポイント, 状態, 記録時刻, メモ, 全体所見, 保存日時`
 
-.footer-links{
-    margin-top:28px;
-    text-align:center;
-    font-size:10px;
-    line-height:1.8;
-}
+（チェックポイント 1 件につき 1 行の縦持ち形式。集計・並べ替えがしやすい形です。）
 
-.footer-links button{
-    border:none;
-    background:none;
-    color:#8f6a56;
-    cursor:pointer;
-    font-size:10px;
-    font-family:inherit;
-}
+## 注意事項
 
-.modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.72);
-    z-index:9999;
-    padding:14px;
-}
-
-.modal-content{
-    background:#fff;
-    border-radius:22px;
-    width:100%;
-    max-width:900px;
-    height:92vh;
-    overflow:auto;
-    margin:auto;
-    padding:24px;
-    color:#333;
-    line-height:1.9;
-}
-
-.close-btn{
-    position:sticky;
-    top:0;
-    float:right;
-    border:none;
-    background:#f59aaa;
-    color:#fff;
-    padding:10px 16px;
-    border-radius:999px;
-    cursor:pointer;
-    font-family:inherit;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-th,td{
-    border-bottom:1px solid #eee;
-    padding:14px 10px;
-    text-align:left;
-    vertical-align:top;
-}
-
-@media(max-width:480px){
-
-    .name{
-        font-size:36px;
-    }
-
-    .position{
-        font-size:22px;
-    }
-
-    .catch{
-        font-size:16px;
-    }
-
-    th,td{
-        display:block;
-        width:100%;
-    }
-
-    th{
-        border-bottom:none;
-        padding-bottom:4px;
-    }
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<div class="card">
-
-<div class="company">
-ChiwAi
-</div>
-
-<div class="position">
-代表
-</div>
-
-<div class="name">
-増村 憲一
-</div>
-
-<div class="line"></div>
-
-<div class="catch">
-犬と人、そしてAI。<br>
-新しい暮らしのカタチを提案します。<br><br>
-
-〒163-1302<br>
-東京都新宿区西新宿6-5-1<br>
-新宿アイランドタワー2F
-</div>
-
-<div class="services">
-
-<div class="service">
-<span>🐾</span>
-愛犬との毎日をもっと快適に
-</div>
-
-<div class="service">
-<span>🐾</span>
-AI活用で仕事効率をサポート
-</div>
-
-<div class="service">
-<span>🐾</span>
-犬好きのための便利グッズ開発
-</div>
-
-</div>
-
-<a class="button" href="https://lin.ee/xyg9hNa">
-ChiwAi公式LINE
-</a>
-
-<div class="footer-links">
-
-<button type="button" onclick="openModal('lawModal')">
-特定商取引法表記
-</button>
-
-|
-
-<button onclick="openModal('policyModal')">
-プライバシーポリシー
-</button>
-
-|
-
-<button onclick="openModal('termsModal')">
-利用規約
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-<script>
-
-function openModal(id){
- document.getElementById(id).style.display='block';
-}
-
-function closeModal(id){
- document.getElementById(id).style.display='none';
-}
-
-</script>
-
-</body>
-</html>
+- 記録は**開いた端末・ブラウザ内**にのみ保存されます。端末をまたいだ共有は CSV 書き出しで行ってください。
+- ブラウザのデータ消去やプライベートモードでは記録が保持されない場合があります。大切な記録は早めに CSV へ書き出してください。
