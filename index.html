@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>マンション巡回チェック</title>
 
+<!-- Firebase SDK (compat). 未設定でも読み込み失敗は許容し、ローカルモードで動作します -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+
 <style>
 :root{
     --bg:#eef2f7;
@@ -24,218 +28,91 @@
 }
 
 *{box-sizing:border-box;}
-
 html,body{margin:0;padding:0;}
-
 body{
     background:var(--bg);
     color:var(--ink);
     font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
-    font-size:15px;
-    line-height:1.6;
-    -webkit-text-size-adjust:100%;
+    font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%;
 }
 
-.app{
-    max-width:760px;
-    margin:0 auto;
-    padding:0 12px 96px;
-}
+.app{max-width:760px;margin:0 auto;padding:0 12px 96px;}
 
 header.top{
-    position:sticky;
-    top:0;
-    z-index:20;
+    position:sticky;top:0;z-index:20;
     background:linear-gradient(135deg,#1e3a8a,#2563eb);
-    color:#fff;
-    padding:16px 16px 12px;
-    border-radius:0 0 18px 18px;
-    box-shadow:var(--shadow);
+    color:#fff;padding:14px 16px 12px;border-radius:0 0 18px 18px;box-shadow:var(--shadow);
 }
-
-header.top h1{
-    margin:0;
-    font-size:19px;
-    letter-spacing:.5px;
-    display:flex;
-    align-items:center;
-    gap:8px;
+header.top .titlerow{display:flex;align-items:center;gap:8px;}
+header.top h1{margin:0;font-size:18px;letter-spacing:.5px;flex:1;}
+header.top .userchip{
+    display:flex;align-items:center;gap:6px;font-size:12px;
+    background:rgba(255,255,255,.16);padding:4px 8px;border-radius:999px;max-width:52%;
 }
-
-header.top .sub{
-    margin-top:2px;
-    font-size:12px;
-    opacity:.85;
+header.top .userchip .un{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+header.top .userchip button{
+    border:none;background:rgba(255,255,255,.25);color:#fff;border-radius:999px;
+    padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;
 }
+header.top .sub{margin-top:2px;font-size:12px;opacity:.85;}
 
-/* tabs */
-.tabs{
-    display:flex;
-    gap:6px;
-    margin-top:12px;
-}
-
+.tabs{display:flex;gap:6px;margin-top:12px;}
 .tabs button{
-    flex:1;
-    border:none;
-    background:rgba(255,255,255,.15);
-    color:#fff;
-    padding:9px 4px;
-    border-radius:10px;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    font-family:inherit;
+    flex:1;border:none;background:rgba(255,255,255,.15);color:#fff;padding:9px 4px;
+    border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
 }
-
-.tabs button.active{
-    background:#fff;
-    color:var(--primary-d);
-}
+.tabs button.active{background:#fff;color:var(--primary-d);}
 
 section.tab{display:none;padding-top:16px;}
 section.tab.active{display:block;}
 
 .card{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:16px;
-    padding:16px;
-    box-shadow:var(--shadow);
-    margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:16px;box-shadow:var(--shadow);margin-bottom:14px;
 }
+.card h2{margin:0 0 12px;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px;}
 
-.card h2{
-    margin:0 0 12px;
-    font-size:15px;
-    color:var(--ink);
-    display:flex;
-    align-items:center;
-    gap:6px;
+label.fld{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+input[type=text],input[type=date],input[type=email],input[type=password],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-size:15px;font-family:inherit;color:var(--ink);background:#fff;
 }
-
-label.fld{
-    display:block;
-    font-size:12px;
-    color:var(--muted);
-    font-weight:700;
-    margin-bottom:4px;
-}
-
-input[type=text],input[type=date],select,textarea{
-    width:100%;
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:10px 12px;
-    font-size:15px;
-    font-family:inherit;
-    color:var(--ink);
-    background:#fff;
-}
-
-input:focus,select:focus,textarea:focus{
-    outline:none;
-    border-color:var(--primary);
-    box-shadow:0 0 0 3px rgba(37,99,235,.12);
-}
-
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
 textarea{resize:vertical;min-height:44px;}
+input:read-only{background:#f1f5f9;color:var(--muted);}
 
-.row2{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    margin-bottom:12px;
-}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 
-/* checkpoint item */
-.cp{
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:12px;
-    margin-bottom:10px;
-    transition:border-color .15s;
-}
-
+.cp{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;transition:border-color .15s;}
 .cp.ok{border-color:var(--ok);background:linear-gradient(0deg,var(--ok-bg),#fff 60%);}
 .cp.warn{border-color:var(--warn);background:linear-gradient(0deg,var(--warn-bg),#fff 60%);}
 .cp.alert{border-color:var(--alert);background:linear-gradient(0deg,var(--alert-bg),#fff 60%);}
-
-.cp .name{
-    font-weight:700;
-    font-size:15px;
-    margin-bottom:8px;
-    display:flex;
-    align-items:center;
-    gap:6px;
-}
-
-.cp .stamp{
-    margin-left:auto;
-    font-size:11px;
-    color:var(--muted);
-    font-weight:400;
-}
-
+.cp .name{font-weight:700;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.cp .stamp{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;}
 .stbtns{display:flex;gap:6px;margin-bottom:8px;}
-
 .stbtns button{
-    flex:1;
-    border:1.5px solid var(--line);
-    background:#fff;
-    color:var(--muted);
-    padding:9px 4px;
-    border-radius:10px;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    font-family:inherit;
+    flex:1;border:1.5px solid var(--line);background:#fff;color:var(--muted);padding:9px 4px;
+    border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
 }
-
 .stbtns button.sel-ok{background:var(--ok);border-color:var(--ok);color:#fff;}
 .stbtns button.sel-warn{background:var(--warn);border-color:var(--warn);color:#fff;}
 .stbtns button.sel-alert{background:var(--alert);border-color:var(--alert);color:#fff;}
-
 .cp textarea{min-height:38px;font-size:14px;}
 
-/* progress */
-.progress{
-    display:flex;
-    gap:10px;
-    text-align:center;
-    margin-bottom:4px;
-}
-.progress .pill{
-    flex:1;
-    border-radius:12px;
-    padding:10px 4px;
-    background:#f1f5f9;
-}
+.progress{display:flex;gap:10px;text-align:center;margin-bottom:4px;}
+.progress .pill{flex:1;border-radius:12px;padding:10px 4px;background:#f1f5f9;}
 .progress .pill .n{font-size:22px;font-weight:800;line-height:1;}
 .progress .pill .l{font-size:11px;color:var(--muted);margin-top:3px;}
-.pill.g .n{color:var(--ok);}
-.pill.a .n{color:var(--warn);}
-.pill.r .n{color:var(--alert);}
-.pill.b .n{color:var(--primary);}
+.pill.g .n{color:var(--ok);}.pill.a .n{color:var(--warn);}.pill.r .n{color:var(--alert);}.pill.b .n{color:var(--primary);}
 
-/* action bar */
 .actionbar{
-    position:fixed;
-    left:0;right:0;bottom:0;
-    background:rgba(255,255,255,.96);
-    border-top:1px solid var(--line);
-    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
-    z-index:30;
-    backdrop-filter:blur(6px);
+    position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);
+    border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    z-index:30;backdrop-filter:blur(6px);
 }
-.actionbar .inner{
-    max-width:760px;margin:0 auto;display:flex;gap:8px;
-}
+.actionbar .inner{max-width:760px;margin:0 auto;display:flex;gap:8px;}
 
-.btn{
-    border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;
-    cursor:pointer;font-family:inherit;flex:1;
-}
+.btn{border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;flex:1;}
 .btn.primary{background:var(--primary);color:#fff;}
 .btn.primary:active{background:var(--primary-d);}
 .btn.ghost{background:#eef2f7;color:var(--ink);flex:0 0 auto;padding:14px 16px;}
@@ -244,13 +121,7 @@ textarea{resize:vertical;min-height:44px;}
 .btn.red{background:var(--alert);color:#fff;}
 .btn.line{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
 
-/* records */
-.rec{
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:12px;
-    margin-bottom:10px;
-}
+.rec{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;}
 .rec .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;}
 .rec .bld{font-weight:800;font-size:15px;}
 .rec .meta{font-size:12px;color:var(--muted);}
@@ -262,45 +133,108 @@ textarea{resize:vertical;min-height:44px;}
 .rec.open .detail{display:block;}
 .rec .di{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid #f1f5f9;}
 .rec .di .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:0 0 auto;}
-.dot.ok{background:var(--ok);}
-.dot.warn{background:var(--warn);}
-.dot.alert{background:var(--alert);}
+.dot.ok{background:var(--ok);}.dot.warn{background:var(--warn);}.dot.alert{background:var(--alert);}
 .rec .di .dn{font-weight:700;flex:0 0 42%;}
 .rec .di .dm{color:var(--muted);}
 
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
 .filters>*{flex:1;min-width:120px;}
+.btnrow{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
 
 .muted{color:var(--muted);font-size:13px;}
 .empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:14px;}
-
 .hint{font-size:12px;color:var(--muted);margin:-4px 0 10px;}
 
-/* settings list */
 .cpedit{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
 .cpedit input{flex:1;}
 .cpedit .del{background:var(--alert-bg);color:var(--alert);border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800;font-family:inherit;}
 .cpedit .mv{background:#eef2f7;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-family:inherit;}
 
 .toast{
-    position:fixed;left:50%;bottom:86px;transform:translateX(-50%);
-    background:#111827;color:#fff;padding:11px 18px;border-radius:999px;
-    font-size:14px;font-weight:700;z-index:50;opacity:0;pointer-events:none;
-    transition:opacity .2s,transform .2s;box-shadow:var(--shadow);
+    position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#111827;color:#fff;
+    padding:11px 18px;border-radius:999px;font-size:14px;font-weight:700;z-index:1200;opacity:0;
+    pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:var(--shadow);max-width:90%;text-align:center;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
-
 .danger-zone{border-color:#fecaca;background:#fff7f7;}
+
+.statusdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+.statusdot.on{background:var(--ok);}
+.statusdot.off{background:#cbd5e1;}
+
+/* login overlay */
+.login-screen{
+    position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#1e3a8a,#2563eb);
+    display:flex;align-items:center;justify-content:center;padding:18px;
+}
+.login-screen.hidden{display:none;}
+.login-card{
+    background:#fff;border-radius:22px;width:100%;max-width:400px;padding:26px 22px;box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.login-logo{text-align:center;font-size:19px;font-weight:800;margin-bottom:6px;}
+.login-tag{text-align:center;font-size:12px;color:var(--muted);margin-bottom:20px;}
+.login-card label.fld{margin-top:12px;}
+.login-card .btn{width:100%;margin-top:18px;}
+.login-links{text-align:center;margin-top:14px;font-size:13px;}
+.login-links button{border:none;background:none;color:var(--primary);cursor:pointer;font-family:inherit;font-size:13px;}
+.login-err{color:var(--alert);font-size:13px;margin-top:10px;min-height:18px;font-weight:700;}
+.login-note{
+    background:var(--warn-bg);border:1px solid #f6d9a8;color:#8a5a12;border-radius:12px;
+    padding:10px 12px;font-size:12px;margin-bottom:6px;line-height:1.6;
+}
+.login-loading{text-align:center;color:var(--muted);font-size:14px;padding:10px;}
 </style>
 </head>
 
 <body>
 
-<div class="app">
+<!-- ========== ログイン画面 ========== -->
+<div id="login" class="login-screen">
+    <div class="login-card">
+        <div class="login-logo">🏢 マンション巡回チェック</div>
+        <div class="login-tag">巡回員ログイン</div>
+
+        <div id="login-loading" class="login-loading">認証を確認中…</div>
+
+        <!-- Firebase 認証 -->
+        <div id="login-fb" style="display:none;">
+            <label class="fld">メールアドレス</label>
+            <input type="email" id="lg-email" autocomplete="username" placeholder="staff@example.com">
+            <label class="fld">パスワード</label>
+            <input type="password" id="lg-pass" autocomplete="current-password" placeholder="パスワード">
+            <div id="lg-err" class="login-err"></div>
+            <button class="btn primary" onclick="doLogin()">ログイン</button>
+            <div class="login-links">
+                <button onclick="doSignup()">新規登録</button>
+                　・
+                <button onclick="doReset()">パスワード再設定</button>
+            </div>
+        </div>
+
+        <!-- ローカルモード（Firebase未設定時） -->
+        <div id="login-local" style="display:none;">
+            <div class="login-note">
+                ⚠️ 認証は未設定です。READMEの手順で Firebase を設定すると本格ログインになります。
+                現在は<strong>ローカルモード</strong>（名前入力のみ）で動作します。
+            </div>
+            <label class="fld">巡回員名</label>
+            <input type="text" id="lg-name" placeholder="例：山田">
+            <button class="btn primary" onclick="doLocalLogin()">はじめる</button>
+        </div>
+    </div>
+</div>
+
+<div class="app" id="appwrap" style="display:none;">
 
 <header class="top">
-    <h1>🏢 マンション巡回チェック</h1>
-    <div class="sub">巡回記録・異常報告・CSV書き出し</div>
+    <div class="titlerow">
+        <h1>🏢 巡回チェック</h1>
+        <div class="userchip">
+            <span class="un" id="chip-user">-</span>
+            <button onclick="doLogout()">ログアウト</button>
+        </div>
+    </div>
+    <div class="sub">巡回記録・異常報告・CSVメール送信</div>
     <div class="tabs">
         <button data-tab="input" class="active" onclick="switchTab('input')">巡回入力</button>
         <button data-tab="records" onclick="switchTab('records')">記録・集計</button>
@@ -310,7 +244,6 @@ textarea{resize:vertical;min-height:44px;}
 
 <!-- ========== 巡回入力 ========== -->
 <section id="tab-input" class="tab active">
-
     <div class="card">
         <h2>📋 巡回情報</h2>
         <div class="row2">
@@ -361,12 +294,10 @@ textarea{resize:vertical;min-height:44px;}
         <h2>📝 全体所見・引き継ぎ</h2>
         <textarea id="in-note" placeholder="全体を通しての気づき、次の巡回者への引き継ぎなど"></textarea>
     </div>
-
 </section>
 
 <!-- ========== 記録・集計 ========== -->
 <section id="tab-records" class="tab">
-
     <div class="card">
         <h2>📊 リーダー向けサマリー</h2>
         <div class="progress">
@@ -388,17 +319,40 @@ textarea{resize:vertical;min-height:44px;}
                 <option value="warn">要確認以上</option>
             </select>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="btnrow">
             <button class="btn green sm" onclick="exportCSV()">⬇ CSV書き出し</button>
+            <button class="btn primary sm" onclick="emailShare()">✉ メールで送る</button>
+            <button class="btn line sm" onclick="emailGAS()">📤 自動送信</button>
+        </div>
+        <p class="hint" id="mail-hint"></p>
+        <div class="btnrow">
             <button class="btn line sm" onclick="clearFilters()">絞込クリア</button>
         </div>
         <div id="rec-list"></div>
     </div>
-
 </section>
 
 <!-- ========== 設定 ========== -->
 <section id="tab-settings" class="tab">
+    <div class="card">
+        <h2>👤 アカウント</h2>
+        <p class="muted" id="acct-info">-</p>
+        <button class="btn line sm" onclick="doLogout()">ログアウト</button>
+    </div>
+
+    <div class="card">
+        <h2>✉️ メール送信の状態</h2>
+        <p class="muted" style="margin:0 0 6px;">
+            <span class="statusdot" id="dot-fb"></span><span id="stat-fb">認証：確認中</span>
+        </p>
+        <p class="muted" style="margin:0;">
+            <span class="statusdot" id="dot-gas"></span><span id="stat-gas">自動送信(GAS)：確認中</span>
+        </p>
+        <p class="hint" style="margin-top:10px;">
+            「メールで送る」は端末の共有シートでCSVを添付して送信します（設定不要）。
+            「自動送信」はGoogle Apps Scriptを設定すると、指定アドレスへ自動でメール送信します（README参照）。
+        </p>
+    </div>
 
     <div class="card">
         <h2>⚙️ チェックポイント設定</h2>
@@ -418,20 +372,11 @@ textarea{resize:vertical;min-height:44px;}
         <p class="hint">記録はこの端末のブラウザ内に保存されています。CSVで書き出してから削除してください。</p>
         <button class="btn red sm" onclick="clearAllRecords()">全記録を削除</button>
     </div>
-
-    <div class="card">
-        <h2>ℹ️ このアプリについて</h2>
-        <p class="muted">
-        マンション巡回業務用の記録ツールです。サーバー不要で、インストールも不要。
-        スマートフォンのブラウザに保存（localStorage）し、CSVで書き出してリーダーが管理・集計できます。
-        </p>
-    </div>
-
 </section>
 
-</div>
+</div><!-- /appwrap -->
 
-<div class="actionbar" id="actionbar">
+<div class="actionbar" id="actionbar" style="display:none;">
     <div class="inner">
         <button class="btn ghost" onclick="clearInput()">クリア</button>
         <button class="btn primary" onclick="saveRecord()">巡回を保存</button>
@@ -443,62 +388,181 @@ textarea{resize:vertical;min-height:44px;}
 <script>
 "use strict";
 
+/* =====================================================================
+   設定（デプロイ時にここを書き換えてください）
+   --------------------------------------------------------------------
+   ① Firebase Authentication:
+      Firebaseコンソール > プロジェクト設定 > マイアプリ の firebaseConfig を貼付。
+   ② Google Apps Script 自動送信:
+      GASのウェブアプリURLを GAS_ENDPOINT に、送信先アドレスを GAS_TO に設定。
+   詳しい手順は README.md を参照。
+   ===================================================================== */
+var FIREBASE_CONFIG = {
+    apiKey:"",
+    authDomain:"",
+    projectId:"",
+    appId:""
+};
+var GAS_ENDPOINT = "";                 // 例: https://script.google.com/macros/s/XXXX/exec
+var GAS_TO       = "";                 // 例: leader@example.com
+/* ===================================================================== */
+
 /* ---------- storage keys ---------- */
 var K_CP="mp_checkpoints_v1";
 var K_REC="mp_records_v1";
 
-/* ---------- default checkpoints (マンション) ---------- */
 var DEFAULT_CP=[
-    "エントランス・オートロック",
-    "共用廊下・階段",
-    "エレベーター",
-    "ゴミ置き場・ダストボックス",
-    "駐輪場",
-    "駐車場",
-    "メールボックス（郵便受け）",
-    "掲示板・掲示物",
-    "共用照明・電灯",
-    "消火設備・消火器",
-    "屋上・非常階段",
-    "植栽・外構・敷地周り"
+    "エントランス・オートロック","共用廊下・階段","エレベーター","ゴミ置き場・ダストボックス",
+    "駐輪場","駐車場","メールボックス（郵便受け）","掲示板・掲示物","共用照明・電灯",
+    "消火設備・消火器","屋上・非常階段","植栽・外構・敷地周り"
 ];
 
-/* ---------- state ---------- */
-var checkpoints=[];      // [{id,name}]
-var current={};          // id -> {status,memo,time}
+var checkpoints=[];
+var current={};
+var sessionUser=null;   // {email, uid, name, mode:'firebase'|'local'}
+var auth=null;
 
 /* ---------- helpers ---------- */
 function $(id){return document.getElementById(id);}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function load(key,fallback){try{var v=localStorage.getItem(key);return v?JSON.parse(v):fallback;}catch(e){return fallback;}}
+function load(key,fb){try{var v=localStorage.getItem(key);return v?JSON.parse(v):fb;}catch(e){return fb;}}
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){toast("保存に失敗しました");}}
 function pad(n){return n<10?"0"+n:""+n;}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function nowTime(){var d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function firebaseConfigured(){return !!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.apiKey.length>10);}
+function gasConfigured(){return !!(GAS_ENDPOINT&&GAS_ENDPOINT.indexOf("http")===0);}
 
 var toastTimer;
 function toast(msg){
     var t=$("toast");t.textContent=msg;t.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer=setTimeout(function(){t.classList.remove("show");},1800);
+    clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove("show");},2200);
 }
 
-/* ---------- init ---------- */
-function init(){
+/* =====================================================================
+   認証
+   ===================================================================== */
+function initAuth(){
+    if(firebaseConfigured() && typeof firebase!=="undefined" && firebase.auth){
+        try{
+            firebase.initializeApp(FIREBASE_CONFIG);
+            auth=firebase.auth();
+            $("login-loading").style.display="none";
+            auth.onAuthStateChanged(function(u){
+                if(u){
+                    sessionUser={email:u.email||"",uid:u.uid,name:(u.displayName||(u.email||"").split("@")[0]||"巡回員"),mode:"firebase"};
+                    enterApp();
+                }else{
+                    sessionUser=null;
+                    showLoginFirebase();
+                }
+            });
+            return;
+        }catch(e){
+            $("login-loading").textContent="認証の初期化に失敗しました。ローカルモードで開始します。";
+        }
+    }
+    // 未設定/失敗 → ローカルモード
+    $("login-loading").style.display="none";
+    var saved=load("mp_local_user",null);
+    if(saved&&saved.name){sessionUser=saved;sessionUser.mode="local";enterApp();}
+    else{showLoginLocal();}
+}
+
+function showLoginFirebase(){
+    $("login").classList.remove("hidden");
+    $("appwrap").style.display="none";$("actionbar").style.display="none";
+    $("login-loading").style.display="none";
+    $("login-fb").style.display="block";$("login-local").style.display="none";
+}
+function showLoginLocal(){
+    $("login").classList.remove("hidden");
+    $("appwrap").style.display="none";$("actionbar").style.display="none";
+    $("login-loading").style.display="none";
+    $("login-fb").style.display="none";$("login-local").style.display="block";
+}
+
+function doLogin(){
+    var email=$("lg-email").value.trim(),pass=$("lg-pass").value;
+    if(!email||!pass){$("lg-err").textContent="メールとパスワードを入力してください";return;}
+    $("lg-err").textContent="";
+    auth.signInWithEmailAndPassword(email,pass).catch(function(e){$("lg-err").textContent=authMsg(e);});
+}
+function doSignup(){
+    var email=$("lg-email").value.trim(),pass=$("lg-pass").value;
+    if(!email||!pass){$("lg-err").textContent="メールとパスワード（6文字以上）を入力してください";return;}
+    $("lg-err").textContent="";
+    auth.createUserWithEmailAndPassword(email,pass).catch(function(e){$("lg-err").textContent=authMsg(e);});
+}
+function doReset(){
+    var email=$("lg-email").value.trim();
+    if(!email){$("lg-err").textContent="メールアドレスを入力してから再設定を押してください";return;}
+    auth.sendPasswordResetEmail(email).then(function(){
+        $("lg-err").style.color="#16a34a";$("lg-err").textContent="再設定メールを送信しました";
+    }).catch(function(e){$("lg-err").style.color="";$("lg-err").textContent=authMsg(e);});
+}
+function authMsg(e){
+    var c=e&&e.code||"";
+    if(c.indexOf("wrong-password")>=0||c.indexOf("invalid-credential")>=0)return"メールまたはパスワードが違います";
+    if(c.indexOf("user-not-found")>=0)return"アカウントが見つかりません";
+    if(c.indexOf("email-already-in-use")>=0)return"このメールは登録済みです";
+    if(c.indexOf("weak-password")>=0)return"パスワードは6文字以上にしてください";
+    if(c.indexOf("invalid-email")>=0)return"メールアドレスの形式が正しくありません";
+    if(c.indexOf("too-many-requests")>=0)return"試行が多すぎます。時間をおいて再度お試しください";
+    return"ログインに失敗しました（"+c+"）";
+}
+function doLocalLogin(){
+    var name=$("lg-name").value.trim();
+    if(!name){toast("巡回員名を入力してください");return;}
+    sessionUser={email:"",uid:"",name:name,mode:"local"};
+    save("mp_local_user",sessionUser);
+    enterApp();
+}
+function doLogout(){
+    if(sessionUser&&sessionUser.mode==="firebase"&&auth){auth.signOut();}
+    else{localStorage.removeItem("mp_local_user");sessionUser=null;showLoginLocal();}
+}
+
+function enterApp(){
+    $("login").classList.add("hidden");
+    $("appwrap").style.display="block";
+    $("actionbar").style.display="block";
+    $("chip-user").textContent=sessionUser.name+(sessionUser.mode==="local"?"（ローカル）":"");
+    if(!$("in-patroller").value)$("in-patroller").value=sessionUser.name;
+    updateStatusPanel();
+    switchTab("input");
+}
+
+/* =====================================================================
+   アプリ初期化
+   ===================================================================== */
+function initApp(){
     checkpoints=load(K_CP,null);
     if(!checkpoints||!checkpoints.length){
         checkpoints=DEFAULT_CP.map(function(n){return{id:uid(),name:n};});
         save(K_CP,checkpoints);
     }
     $("in-date").value=todayStr();
-    var last=load("mp_last_patroller","");
-    if(last)$("in-patroller").value=last;
-    renderCheckpoints();
-    renderCpEdit();
-    renderRecords();
-    updateProgress();
-    refreshBuildingList();
+    renderCheckpoints();renderCpEdit();renderRecords();updateProgress();refreshBuildingList();
+    // mail hint
+    $("mail-hint").textContent = gasConfigured()
+        ? "「自動送信」は "+GAS_TO+" 宛に送信します。"
+        : "「自動送信」はGAS未設定です。設定するとボタン一発で自動メール送信できます（README参照）。";
+}
+
+function updateStatusPanel(){
+    var fbOn=firebaseConfigured();
+    $("dot-fb").className="statusdot "+(fbOn?"on":"off");
+    $("stat-fb").textContent="認証："+(fbOn?"Firebase 有効":"未設定（ローカルモード）");
+    var gasOn=gasConfigured();
+    $("dot-gas").className="statusdot "+(gasOn?"on":"off");
+    $("stat-gas").textContent="自動送信(GAS)："+(gasOn?("有効 → "+GAS_TO):"未設定");
+    if(sessionUser){
+        $("acct-info").textContent=sessionUser.mode==="firebase"
+            ? ("ログイン中："+sessionUser.email)
+            : ("ローカルモード："+sessionUser.name+"（この端末のみ）");
+    }
 }
 
 /* ---------- tabs ---------- */
@@ -510,18 +574,17 @@ function switchTab(name){
     for(var j=0;j<btns.length;j++)btns[j].classList.toggle("active",btns[j].getAttribute("data-tab")===name);
     $("actionbar").style.display=(name==="input")?"block":"none";
     if(name==="records"){renderRecords();updateSummary();}
+    if(name==="settings"){updateStatusPanel();}
     window.scrollTo(0,0);
 }
 
-/* ---------- checkpoint input rendering ---------- */
+/* ---------- checkpoint input ---------- */
 function renderCheckpoints(){
     var html="";
     checkpoints.forEach(function(cp){
-        var st=current[cp.id]||{};
-        var cls=st.status?st.status:"";
+        var st=current[cp.id]||{};var cls=st.status?st.status:"";
         html+='<div class="cp '+cls+'" id="cp-'+cp.id+'">';
-        html+='<div class="name">'+esc(cp.name)+
-              '<span class="stamp">'+(st.time?("⏱ "+esc(st.time)):"")+'</span></div>';
+        html+='<div class="name">'+esc(cp.name)+'<span class="stamp">'+(st.time?("⏱ "+esc(st.time)):"")+'</span></div>';
         html+='<div class="stbtns">';
         html+='<button class="'+(st.status==="ok"?"sel-ok":"")+'" onclick="setStatus(\''+cp.id+'\',\'ok\')">異常なし</button>';
         html+='<button class="'+(st.status==="warn"?"sel-warn":"")+'" onclick="setStatus(\''+cp.id+'\',\'warn\')">要確認</button>';
@@ -532,14 +595,11 @@ function renderCheckpoints(){
     });
     $("cp-list").innerHTML=html;
 }
-
 function setStatus(id,status){
     var st=current[id]||{};
-    if(st.status===status){delete st.status;}
-    else{st.status=status;st.time=nowTime();}
+    if(st.status===status){delete st.status;}else{st.status=status;st.time=nowTime();}
     current[id]=st;
-    var el=$("cp-"+id);
-    el.className="cp "+(st.status||"");
+    var el=$("cp-"+id);el.className="cp "+(st.status||"");
     el.querySelector(".stamp").textContent=st.time&&st.status?("⏱ "+st.time):"";
     var btns=el.querySelectorAll(".stbtns button");
     btns[0].className=st.status==="ok"?"sel-ok":"";
@@ -547,252 +607,192 @@ function setStatus(id,status){
     btns[2].className=st.status==="alert"?"sel-alert":"";
     updateProgress();
 }
-
-function setMemo(id,val){
-    var st=current[id]||{};st.memo=val;current[id]=st;
-}
-
+function setMemo(id,val){var st=current[id]||{};st.memo=val;current[id]=st;}
 function updateProgress(){
     var ok=0,warn=0,alert=0;
-    checkpoints.forEach(function(cp){
-        var s=(current[cp.id]||{}).status;
-        if(s==="ok")ok++;else if(s==="warn")warn++;else if(s==="alert")alert++;
-    });
-    $("p-total").textContent=checkpoints.length;
-    $("p-ok").textContent=ok;
-    $("p-warn").textContent=warn;
-    $("p-alert").textContent=alert;
-    var done=ok+warn+alert;
-    var remain=checkpoints.length-done;
+    checkpoints.forEach(function(cp){var s=(current[cp.id]||{}).status;if(s==="ok")ok++;else if(s==="warn")warn++;else if(s==="alert")alert++;});
+    $("p-total").textContent=checkpoints.length;$("p-ok").textContent=ok;$("p-warn").textContent=warn;$("p-alert").textContent=alert;
+    var remain=checkpoints.length-(ok+warn+alert);
     $("p-remain").textContent=remain>0?("未チェック "+remain+" 項目"):"全項目チェック済み ✔";
 }
 
-/* ---------- save record ---------- */
+/* ---------- save ---------- */
 function saveRecord(){
     var building=$("in-building").value.trim();
-    var patroller=$("in-patroller").value.trim();
+    var patroller=$("in-patroller").value.trim()||(sessionUser?sessionUser.name:"");
     if(!building){toast("マンション名を入力してください");switchTab('input');$("in-building").focus();return;}
-    var items=[];
-    var checked=0;
+    var items=[],checked=0;
     checkpoints.forEach(function(cp){
-        var st=current[cp.id]||{};
-        if(st.status)checked++;
+        var st=current[cp.id]||{};if(st.status)checked++;
         items.push({name:cp.name,status:st.status||"",memo:st.memo||"",time:st.time||""});
     });
     if(checked===0){toast("チェックが1件もありません");return;}
     var rec={
-        id:uid(),
-        savedAt:new Date().toISOString(),
-        date:$("in-date").value||todayStr(),
-        shift:$("in-shift").value,
-        building:building,
-        patroller:patroller,
-        note:$("in-note").value.trim(),
-        items:items
+        id:uid(),savedAt:new Date().toISOString(),date:$("in-date").value||todayStr(),
+        shift:$("in-shift").value,building:building,patroller:patroller,
+        userEmail:sessionUser?sessionUser.email:"",userUid:sessionUser?sessionUser.uid:"",
+        note:$("in-note").value.trim(),items:items
     };
-    var recs=load(K_REC,[]);
-    recs.unshift(rec);
-    save(K_REC,recs);
-    save("mp_last_patroller",patroller);
-    refreshBuildingList();
-    clearInput(true);
-    toast("巡回を保存しました");
-    switchTab('records');
+    var recs=load(K_REC,[]);recs.unshift(rec);save(K_REC,recs);
+    refreshBuildingList();clearInput(true);
+    toast("巡回を保存しました");switchTab('records');
 }
-
 function clearInput(silent){
-    current={};
-    $("in-note").value="";
-    renderCheckpoints();
-    updateProgress();
+    current={};$("in-note").value="";renderCheckpoints();updateProgress();
     if(!silent)toast("入力をクリアしました");
 }
 
 /* ---------- records ---------- */
 function statusRank(items){
-    var hasAlert=false,hasWarn=false;
-    items.forEach(function(i){if(i.status==="alert")hasAlert=true;else if(i.status==="warn")hasWarn=true;});
-    if(hasAlert)return"alert";if(hasWarn)return"warn";return"ok";
+    var a=false,w=false;items.forEach(function(i){if(i.status==="alert")a=true;else if(i.status==="warn")w=true;});
+    return a?"alert":(w?"warn":"ok");
 }
-function statusBadge(rank){
-    if(rank==="alert")return'<span class="badge r">異常あり</span>';
-    if(rank==="warn")return'<span class="badge a">要確認</span>';
-    return'<span class="badge g">異常なし</span>';
-}
-
+function statusBadge(r){return r==="alert"?'<span class="badge r">異常あり</span>':(r==="warn"?'<span class="badge a">要確認</span>':'<span class="badge g">異常なし</span>');}
 function getFilteredRecords(){
     var recs=load(K_REC,[]);
-    var fb=$("f-building").value.trim().toLowerCase();
-    var fd=$("f-date").value;
-    var fs=$("f-status").value;
+    var fb=$("f-building").value.trim().toLowerCase(),fd=$("f-date").value,fs=$("f-status").value;
     return recs.filter(function(r){
         if(fb&&r.building.toLowerCase().indexOf(fb)<0)return false;
         if(fd&&r.date!==fd)return false;
-        if(fs){
-            var rank=statusRank(r.items);
-            if(fs==="alert"&&rank!=="alert")return false;
-            if(fs==="warn"&&rank==="ok")return false;
-        }
+        if(fs){var rk=statusRank(r.items);if(fs==="alert"&&rk!=="alert")return false;if(fs==="warn"&&rk==="ok")return false;}
         return true;
     });
 }
-
 function renderRecords(){
     updateSummary();
     var recs=getFilteredRecords();
-    if(!recs.length){
-        $("rec-list").innerHTML='<div class="empty">該当する記録はありません</div>';
-        return;
-    }
-    var stName={ok:"異常なし",warn:"要確認",alert:"異常あり"};
-    var html="";
+    if(!recs.length){$("rec-list").innerHTML='<div class="empty">該当する記録はありません</div>';return;}
+    var stName={ok:"異常なし",warn:"要確認",alert:"異常あり"};var html="";
     recs.forEach(function(r){
         var rank=statusRank(r.items);
         html+='<div class="rec" id="rec-'+r.id+'">';
         html+='<div class="head" onclick="toggleRec(\''+r.id+'\')">';
-        html+='<span class="bld">'+esc(r.building)+'</span>';
-        html+=statusBadge(rank);
-        html+='<span class="meta">'+esc(r.date)+' '+esc(r.shift||"")+' / '+esc(r.patroller||"未記入")+'</span>';
-        html+='</div>';
+        html+='<span class="bld">'+esc(r.building)+'</span>'+statusBadge(rank);
+        html+='<span class="meta">'+esc(r.date)+' '+esc(r.shift||"")+' / '+esc(r.patroller||"未記入")+'</span></div>';
         html+='<div class="detail">';
         r.items.forEach(function(it){
             if(!it.status)return;
-            html+='<div class="di"><span class="dot '+it.status+'"></span>';
-            html+='<span class="dn">'+esc(it.name)+'</span>';
+            html+='<div class="di"><span class="dot '+it.status+'"></span><span class="dn">'+esc(it.name)+'</span>';
             html+='<span class="dm">'+stName[it.status]+(it.memo?("："+esc(it.memo)):"")+(it.time?(" ("+esc(it.time)+")"):"")+'</span></div>';
         });
+        if(r.userEmail)html+='<div class="di"><span class="dn">ログイン</span><span class="dm">'+esc(r.userEmail)+'</span></div>';
         if(r.note)html+='<div class="di"><span class="dn">全体所見</span><span class="dm">'+esc(r.note)+'</span></div>';
         html+='<div style="margin-top:8px;"><button class="btn red sm" onclick="deleteRecord(\''+r.id+'\')">この記録を削除</button></div>';
         html+='</div></div>';
     });
     $("rec-list").innerHTML=html;
 }
-
 function toggleRec(id){$("rec-"+id).classList.toggle("open");}
-
 function deleteRecord(id){
     if(!confirm("この巡回記録を削除しますか？"))return;
-    var recs=load(K_REC,[]).filter(function(r){return r.id!==id;});
-    save(K_REC,recs);
-    renderRecords();
-    toast("削除しました");
+    save(K_REC,load(K_REC,[]).filter(function(r){return r.id!==id;}));
+    renderRecords();toast("削除しました");
 }
-
 function updateSummary(){
-    var recs=load(K_REC,[]);
-    var warn=0,alert=0;
+    var recs=load(K_REC,[]);var warn=0,alert=0;
     recs.forEach(function(r){var rk=statusRank(r.items);if(rk==="alert")alert++;else if(rk==="warn")warn++;});
-    $("s-count").textContent=recs.length;
-    $("s-warn").textContent=warn;
-    $("s-alert").textContent=alert;
-    if(recs.length){
-        var l=recs[0];
-        $("s-latest").textContent="最新："+l.date+" "+(l.shift||"")+"　"+l.building+"（"+(l.patroller||"未記入")+"）";
-    }else{
-        $("s-latest").textContent="まだ記録がありません。";
-    }
+    $("s-count").textContent=recs.length;$("s-warn").textContent=warn;$("s-alert").textContent=alert;
+    if(recs.length){var l=recs[0];$("s-latest").textContent="最新："+l.date+" "+(l.shift||"")+"　"+l.building+"（"+(l.patroller||"未記入")+"）";}
+    else{$("s-latest").textContent="まだ記録がありません。";}
 }
-
-function clearFilters(){
-    $("f-building").value="";$("f-date").value="";$("f-status").value="";
-    renderRecords();
-}
+function clearFilters(){$("f-building").value="";$("f-date").value="";$("f-status").value="";renderRecords();}
 
 /* ---------- CSV ---------- */
-function csvCell(v){
-    v=String(v==null?"":v);
-    if(/[",\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';
-    return v;
-}
-function exportCSV(){
+function csvCell(v){v=String(v==null?"":v);if(/[",\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';return v;}
+function buildCSV(){
     var recs=getFilteredRecords();
-    if(!recs.length){toast("書き出す記録がありません");return;}
-    var stName={ok:"異常なし",warn:"要確認",alert:"異常あり",_:""};
-    var rows=[["巡回日","時間帯","マンション名","巡回者","チェックポイント","状態","記録時刻","メモ","全体所見","保存日時"]];
+    var stName={ok:"異常なし",warn:"要確認",alert:"異常あり"};
+    var rows=[["巡回日","時間帯","マンション名","巡回者","ログインユーザー","チェックポイント","状態","記録時刻","メモ","全体所見","保存日時"]];
     recs.forEach(function(r){
         r.items.forEach(function(it){
             if(!it.status)return;
-            rows.push([r.date,r.shift||"",r.building,r.patroller||"",it.name,stName[it.status]||"",it.time||"",it.memo||"",r.note||"",r.savedAt]);
+            rows.push([r.date,r.shift||"",r.building,r.patroller||"",r.userEmail||"",it.name,stName[it.status]||"",it.time||"",it.memo||"",r.note||"",r.savedAt]);
         });
     });
     var csv=rows.map(function(row){return row.map(csvCell).join(",");}).join("\r\n");
-    // UTF-8 BOM so Excel(日本語)で文字化けしない
-    var blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement("a");
-    a.href=url;
-    a.download="巡回記録_"+todayStr()+".csv";
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    return {csv:csv,count:recs.length,filename:"巡回記録_"+todayStr()+".csv"};
+}
+function downloadBlob(blob,filename){
+    var url=URL.createObjectURL(blob);var a=document.createElement("a");
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+function exportCSV(){
+    var d=buildCSV();if(!d.count){toast("書き出す記録がありません");return;}
+    downloadBlob(new Blob(["﻿"+d.csv],{type:"text/csv;charset=utf-8;"}),d.filename);
     toast("CSVを書き出しました");
+}
+
+/* ---------- メール送信：共有シート ---------- */
+function emailShare(){
+    var d=buildCSV();if(!d.count){toast("送信する記録がありません");return;}
+    var blob=new Blob(["﻿"+d.csv],{type:"text/csv;charset=utf-8;"});
+    var file=null;
+    try{file=new File([blob],d.filename,{type:"text/csv"});}catch(e){file=null;}
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:"巡回記録",text:"巡回記録CSV（"+d.count+"件）を送ります。"})
+            .then(function(){toast("送信メニューを開きました");})
+            .catch(function(err){if(err&&err.name!=="AbortError"){emailFallback(blob,d);}});
+    }else{
+        emailFallback(blob,d);
+    }
+}
+function emailFallback(blob,d){
+    downloadBlob(blob,d.filename);
+    var subject=encodeURIComponent("巡回記録 "+todayStr());
+    var body=encodeURIComponent("お疲れ様です。\n巡回記録CSV（"+d.count+"件）をダウンロードしました。\nこのメールにCSVファイルを添付して送信してください。");
+    var to=gasConfigured()&&GAS_TO?encodeURIComponent(GAS_TO):"";
+    toast("CSVを保存しました。メールに添付して送信してください");
+    setTimeout(function(){window.location.href="mailto:"+to+"?subject="+subject+"&body="+body;},400);
+}
+
+/* ---------- メール送信：Google Apps Script 自動送信 ---------- */
+function emailGAS(){
+    if(!gasConfigured()){toast("自動送信はGAS未設定です（READMEの手順で設定）");switchTab('settings');return;}
+    var d=buildCSV();if(!d.count){toast("送信する記録がありません");return;}
+    toast("送信中…");
+    var payload=JSON.stringify({csv:d.csv,filename:d.filename,to:GAS_TO,subject:todayStr()+"（"+d.count+"件）",from:sessionUser?sessionUser.email||sessionUser.name:""});
+    fetch(GAS_ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:payload})
+        .then(function(){toast("自動送信しました（"+GAS_TO+"）");})
+        .catch(function(){toast("送信に失敗しました。通信環境をご確認ください");});
 }
 
 /* ---------- building datalist ---------- */
 function refreshBuildingList(){
-    var recs=load(K_REC,[]);
-    var seen={},opts="";
+    var recs=load(K_REC,[]),seen={},opts="";
     recs.forEach(function(r){if(r.building&&!seen[r.building]){seen[r.building]=1;opts+='<option value="'+esc(r.building)+'">';}});
     $("bld-list").innerHTML=opts;
 }
 
-/* ---------- settings: checkpoint edit ---------- */
+/* ---------- settings: checkpoints ---------- */
 function renderCpEdit(){
     var html="";
     checkpoints.forEach(function(cp,idx){
         html+='<div class="cpedit">';
-        html+='<button class="mv" onclick="moveCp('+idx+',-1)" title="上へ">▲</button>';
-        html+='<button class="mv" onclick="moveCp('+idx+',1)" title="下へ">▼</button>';
+        html+='<button class="mv" onclick="moveCp('+idx+',-1)">▲</button>';
+        html+='<button class="mv" onclick="moveCp('+idx+',1)">▼</button>';
         html+='<input type="text" value="'+esc(cp.name)+'" onchange="renameCp(\''+cp.id+'\',this.value)">';
-        html+='<button class="del" onclick="delCp(\''+cp.id+'\')">削除</button>';
-        html+='</div>';
+        html+='<button class="del" onclick="delCp(\''+cp.id+'\')">削除</button></div>';
     });
     $("cp-edit-list").innerHTML=html;
 }
 function persistCp(){save(K_CP,checkpoints);renderCheckpoints();renderCpEdit();updateProgress();}
-function addCheckpoint(){
-    var v=$("cp-new").value.trim();
-    if(!v)return;
-    checkpoints.push({id:uid(),name:v});
-    $("cp-new").value="";
-    persistCp();
-    toast("追加しました");
-}
-function renameCp(id,val){
-    val=val.trim();if(!val)return;
-    checkpoints.forEach(function(c){if(c.id===id)c.name=val;});
-    save(K_CP,checkpoints);renderCheckpoints();
-}
-function delCp(id){
-    if(!confirm("このチェックポイントを削除しますか？"))return;
-    checkpoints=checkpoints.filter(function(c){return c.id!==id;});
-    delete current[id];
-    persistCp();
-}
-function moveCp(idx,dir){
-    var ni=idx+dir;
-    if(ni<0||ni>=checkpoints.length)return;
-    var tmp=checkpoints[idx];checkpoints[idx]=checkpoints[ni];checkpoints[ni]=tmp;
-    persistCp();
-}
-function resetCheckpoints(){
-    if(!confirm("チェックポイントを初期リストに戻しますか？"))return;
-    checkpoints=DEFAULT_CP.map(function(n){return{id:uid(),name:n};});
-    current={};
-    persistCp();
-    toast("初期リストに戻しました");
-}
+function addCheckpoint(){var v=$("cp-new").value.trim();if(!v)return;checkpoints.push({id:uid(),name:v});$("cp-new").value="";persistCp();toast("追加しました");}
+function renameCp(id,val){val=val.trim();if(!val)return;checkpoints.forEach(function(c){if(c.id===id)c.name=val;});save(K_CP,checkpoints);renderCheckpoints();}
+function delCp(id){if(!confirm("このチェックポイントを削除しますか？"))return;checkpoints=checkpoints.filter(function(c){return c.id!==id;});delete current[id];persistCp();}
+function moveCp(idx,dir){var ni=idx+dir;if(ni<0||ni>=checkpoints.length)return;var t=checkpoints[idx];checkpoints[idx]=checkpoints[ni];checkpoints[ni]=t;persistCp();}
+function resetCheckpoints(){if(!confirm("チェックポイントを初期リストに戻しますか？"))return;checkpoints=DEFAULT_CP.map(function(n){return{id:uid(),name:n};});current={};persistCp();toast("初期リストに戻しました");}
 
 /* ---------- danger ---------- */
 function clearAllRecords(){
     if(!confirm("保存されている全ての巡回記録を削除します。よろしいですか？"))return;
     if(!confirm("この操作は取り消せません。本当に削除しますか？"))return;
-    save(K_REC,[]);
-    renderRecords();refreshBuildingList();
-    toast("全記録を削除しました");
+    save(K_REC,[]);renderRecords();refreshBuildingList();toast("全記録を削除しました");
 }
 
 /* ---------- go ---------- */
-init();
+initApp();
+initAuth();
 </script>
 
 </body>
