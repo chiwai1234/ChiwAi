@@ -190,7 +190,7 @@ input:read-only{background:#f1f5f9;color:var(--muted);}
         <div class="login-logo">🏢 マンション巡回チェック</div>
         <div class="login-tag">巡回員ログイン</div>
 
-        <div id="login-loading" class="login-loading">認証を確認中…</div>
+        <div id="login-loading" class="login-loading" style="display:none;">認証を確認中…</div>
 
         <!-- Firebase 認証 -->
         <div id="login-fb" style="display:none;">
@@ -207,8 +207,8 @@ input:read-only{background:#f1f5f9;color:var(--muted);}
             </div>
         </div>
 
-        <!-- ローカルモード（Firebase未設定時） -->
-        <div id="login-local" style="display:none;">
+        <!-- ローカルモード（Firebase未設定/無効時）※初期表示 -->
+        <div id="login-local" style="display:block;">
             <div class="login-note">
                 ⚠️ 認証は未設定です。READMEの手順で Firebase を設定すると本格ログインになります。
                 現在は<strong>ローカルモード</strong>（名前入力のみ）で動作します。
