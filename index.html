@@ -393,6 +393,9 @@ input:read-only{background:#f1f5f9;color:var(--muted);}
       GASのウェブアプリURLを GAS_ENDPOINT に、送信先アドレスを GAS_TO に設定。
    詳しい手順は README.md を参照。
    ===================================================================== */
+// パスワード認証（Firebase）の有効/無効。
+// 一旦無効化中。Firebase設定が済んだら true に戻すとパスワードログインが復活します。
+var AUTH_ENABLED = false;
 var FIREBASE_CONFIG = {
     apiKey:"",
     authDomain:"",
@@ -427,7 +430,7 @@ function pad(n){return n<10?"0"+n:""+n;}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function nowTime(){var d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
-function firebaseConfigured(){return !!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.apiKey.length>10);}
+function firebaseConfigured(){return !!(AUTH_ENABLED&&FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.apiKey.length>10);}
 function gasConfigured(){return !!(GAS_ENDPOINT&&GAS_ENDPOINT.indexOf("http")===0);}
 
 var toastTimer;
@@ -579,7 +582,7 @@ function initApp(){
 function updateStatusPanel(){
     var fbOn=firebaseConfigured();
     $("dot-fb").className="statusdot "+(fbOn?"on":"off");
-    $("stat-fb").textContent="認証："+(fbOn?"Firebase 有効":"未設定（ローカルモード）");
+    $("stat-fb").textContent="認証："+(fbOn?"Firebase 有効":(AUTH_ENABLED?"未設定（ローカルモード）":"無効化中（名前入力のみ）"));
     var gasOn=gasConfigured();
     $("dot-gas").className="statusdot "+(gasOn?"on":"off");
     $("stat-gas").textContent="自動送信(GAS)："+(gasOn?("有効 → "+GAS_TO):"未設定");
