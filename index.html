@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>マンション巡回チェック</title>
 
-<!-- Firebase SDK (compat). 未設定でも読み込み失敗は許容し、ローカルモードで動作します -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-
 <style>
 :root{
     --bg:#eef2f7;
@@ -443,28 +439,50 @@ function toast(msg){
 /* =====================================================================
    認証
    ===================================================================== */
+var FB_VER="10.12.5";
+function loadScript(src){
+    return new Promise(function(res,rej){
+        var s=document.createElement("script");s.src=src;s.async=true;
+        s.onload=res;s.onerror=function(){rej(new Error("load failed"));};
+        document.head.appendChild(s);
+    });
+}
+function loadFirebase(){
+    if(typeof firebase!=="undefined"&&firebase.auth)return Promise.resolve();
+    var base="https://www.gstatic.com/firebasejs/"+FB_VER+"/";
+    return loadScript(base+"firebase-app-compat.js").then(function(){return loadScript(base+"firebase-auth-compat.js");});
+}
+
 function initAuth(){
-    if(firebaseConfigured() && typeof firebase!=="undefined" && firebase.auth){
-        try{
+    if(firebaseConfigured()){
+        // まずパスワード入力画面を即表示（SDK読み込みは裏で行う）
+        showLoginFirebase();
+        var timedOut=false;
+        var timer=setTimeout(function(){
+            timedOut=true;
+            $("lg-err").style.color="";
+            $("lg-err").textContent="認証サービスに接続できません。通信環境を確認して再読み込みしてください。";
+        },8000);
+        loadFirebase().then(function(){
+            if(timedOut)return;
+            clearTimeout(timer);
             firebase.initializeApp(FIREBASE_CONFIG);
             auth=firebase.auth();
-            $("login-loading").style.display="none";
             auth.onAuthStateChanged(function(u){
                 if(u){
                     sessionUser={email:u.email||"",uid:u.uid,name:(u.displayName||(u.email||"").split("@")[0]||"巡回員"),mode:"firebase"};
                     enterApp();
-                }else{
-                    sessionUser=null;
-                    showLoginFirebase();
                 }
+                // 未ログイン時は既にパスワード画面を表示済みのため何もしない
             });
-            return;
-        }catch(e){
-            $("login-loading").textContent="認証の初期化に失敗しました。ローカルモードで開始します。";
-        }
+        }).catch(function(){
+            clearTimeout(timer);
+            $("lg-err").style.color="";
+            $("lg-err").textContent="認証サービスの読み込みに失敗しました。通信環境を確認して再読み込みしてください。";
+        });
+        return;
     }
-    // 未設定/失敗 → ローカルモード
-    $("login-loading").style.display="none";
+    // 未設定 → ローカルモード
     var saved=load("mp_local_user",null);
     if(saved&&saved.name){sessionUser=saved;sessionUser.mode="local";enterApp();}
     else{showLoginLocal();}
@@ -483,19 +501,26 @@ function showLoginLocal(){
     $("login-fb").style.display="none";$("login-local").style.display="block";
 }
 
+function authReady(){
+    if(!auth){$("lg-err").style.color="";$("lg-err").textContent="認証サービスを準備中です。数秒後にもう一度お試しください。";return false;}
+    return true;
+}
 function doLogin(){
+    if(!authReady())return;
     var email=$("lg-email").value.trim(),pass=$("lg-pass").value;
     if(!email||!pass){$("lg-err").textContent="メールとパスワードを入力してください";return;}
-    $("lg-err").textContent="";
+    $("lg-err").style.color="";$("lg-err").textContent="";
     auth.signInWithEmailAndPassword(email,pass).catch(function(e){$("lg-err").textContent=authMsg(e);});
 }
 function doSignup(){
+    if(!authReady())return;
     var email=$("lg-email").value.trim(),pass=$("lg-pass").value;
     if(!email||!pass){$("lg-err").textContent="メールとパスワード（6文字以上）を入力してください";return;}
-    $("lg-err").textContent="";
+    $("lg-err").style.color="";$("lg-err").textContent="";
     auth.createUserWithEmailAndPassword(email,pass).catch(function(e){$("lg-err").textContent=authMsg(e);});
 }
 function doReset(){
+    if(!authReady())return;
     var email=$("lg-email").value.trim();
     if(!email){$("lg-err").textContent="メールアドレスを入力してから再設定を押してください";return;}
     auth.sendPasswordResetEmail(email).then(function(){
