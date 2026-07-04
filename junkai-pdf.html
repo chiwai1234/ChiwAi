@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>巡回報告書 生成ツール</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Meiryo','Hiragino Sans','Yu Gothic',sans-serif;background:#f0f4f8;color:#1a2332;}
+
+/* ── ツール画面 ── */
+.tool{max-width:900px;margin:0 auto;padding:24px 20px 60px;}
+.hdr{background:linear-gradient(135deg,#1a3a5c,#2d6096);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:20px;}
+.hdr h1{font-size:20px;font-weight:700;margin-bottom:4px;}
+.hdr p{font-size:12px;opacity:.8;}
+
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+.card-lbl{font-size:11px;font-weight:700;color:#1a3a5c;letter-spacing:1px;display:block;margin-bottom:8px;}
+textarea.csv{width:100%;height:150px;border:2px dashed #c8d6e8;border-radius:10px;padding:12px;font-size:12px;font-family:'Courier New',monospace;background:#f7fafc;resize:vertical;outline:none;color:#334155;}
+textarea.csv:focus{border-color:#2d6096;background:#fff;}
+textarea.csv::placeholder{color:#94a3b8;}
+
+.btn-gen{width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,#1a3a5c,#2d6096);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;transition:opacity .2s;}
+.btn-gen:hover{opacity:.88;}
+.err{color:#dc2626;font-size:12px;margin-top:10px;padding:10px 14px;background:#fff1f1;border-radius:8px;border-left:3px solid #ef4444;display:none;line-height:1.6;}
+.status{font-size:12px;margin-top:8px;color:#64748b;display:none;}
+
+/* 物件リスト */
+.list-wrap{display:none;}
+.list-wrap.show{display:block;}
+.list-title{font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:12px;}
+.prop-card{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:10px;box-shadow:0 1px 5px rgba(0,0,0,.08);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.prop-info{flex:1;min-width:180px;}
+.prop-name{font-size:14px;font-weight:700;margin-bottom:3px;}
+.prop-meta{font-size:11px;color:#64748b;}
+.prop-badges{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.bOk  {font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#e8faf5;color:#0e7a5a;}
+.bWarn{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fffbeb;color:#b45309;}
+.bFix {font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fff1f1;color:#b91c1c;}
+.prop-btns{display:flex;gap:8px;flex-shrink:0;}
+.bPdf{padding:9px 18px;border-radius:8px;border:none;background:#1a3a5c;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.bDoc{padding:9px 18px;border-radius:8px;border:2px solid #059669;background:#fff;color:#059669;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.bDoc:hover{background:#059669;color:#fff;}
+.bDoc:disabled{opacity:.5;cursor:wait;}
+
+/* ── 印刷プレビュー（非表示・印刷時のみ） ── */
+#printArea{display:none;}
+
+/* ── 報告書本体（印刷用） ── */
+.rp{font-family:'Meiryo','MS PGothic','Hiragino Sans',sans-serif;color:#000;background:#fff;}
+.rp-title{text-align:center;font-size:17pt;font-weight:bold;margin-bottom:5px;letter-spacing:1px;}
+.rp-mgmt{text-align:right;font-size:8.5pt;margin-bottom:3px;}
+.rp-tbl{width:100%;border-collapse:collapse;margin-bottom:3px;}
+.rp-tbl td{border:1px solid #888;padding:3px 6px;font-size:8.5pt;vertical-align:middle;}
+.rp-lbl{background:#D9EAF7;font-weight:bold;text-align:center;width:13%;}
+.rp-val{width:28%;}
+.rp-intro{font-size:9.5pt;font-weight:bold;margin:5px 0 4px;}
+.ck-tbl{width:100%;border-collapse:collapse;}
+.ck-tbl th,.ck-tbl td{border:1px solid #888;padding:3px 5px;font-size:8pt;vertical-align:top;}
+.ck-tbl thead th{background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;}
+.ck-cat{background:#F2F2F2;font-weight:bold;text-align:center;vertical-align:middle;}
+.ck-ok  {text-align:center;vertical-align:top;}
+.ck-warn{text-align:center;font-weight:bold;color:#7d4e00;background:#FFF3A0;vertical-align:top;}
+.ck-fix {text-align:center;font-weight:bold;color:#a00000;background:#FFE0E0;vertical-align:top;}
+.ck-chk{color:#444;font-size:7.5pt;}
+.nt-lbl{font-size:9pt;font-weight:bold;border:1px solid #888;border-bottom:none;padding:3px 6px;margin-top:4px;}
+.nt-box{border:1px solid #888;min-height:52px;padding:4px 6px;font-size:8.5pt;}
+
+@media print{
+  body{background:#fff!important;}
+  .tool{display:none!important;}
+  #printArea{display:block!important;}
+  .rp{width:100%;padding:0;margin:0;}
+  @page{size:A4 portrait;margin:13mm;}
+}
+</style>
+</head>
+<body>
+
+<div class="tool">
+  <div class="hdr">
+    <h1>📄 巡回報告書 生成ツール</h1>
+    <p>メールのCSVを貼り付け → 「生成」→ 物件ごとに PDF印刷 または Word保存</p>
+  </div>
+
+  <div class="card">
+    <span class="card-lbl">▎ メールのCSVを貼り付け</span>
+    <textarea class="csv" id="csvIn" placeholder="メール本文をそのままここに貼り付けてください&#10;（===BEGIN CSV=== から ===END CSV=== まで、または #JUNKAI から始まるデータ）"></textarea>
+    <div class="err" id="errMsg"></div>
+    <div class="status" id="statusMsg"></div>
+    <button class="btn-gen" id="btnGen" onclick="generate()">📊 報告書を生成する</button>
+  </div>
+
+  <div class="list-wrap" id="listWrap">
+    <div class="list-title" id="listTitle"></div>
+    <div id="listItems"></div>
+  </div>
+</div>
+
+<!-- 印刷専用 -->
+<div id="printArea"></div>
+
+<script>
+// ══════════════════════════════════════════
+// 雛形準拠 状況チェック文言マスタ
+// ══════════════════════════════════════════
+const CK = {
+  'アプローチ':        '館銘板・排水溝・床等',
+  'エントランス':      '天井・床・マット・レール溝等',
+  'メールコーナー':    'チラシ等が散乱または溢れていないか',
+  '廊下、階段':       '床・手摺・玄関周り・排水溝・腰壁等',
+  '各戸玄関周り':     '玄関扉・インターフォン・PS扉等',
+  '建物外周':         '植え込み周り（植栽・雑草）水周り等',
+  'ゴミ置き場':       '整理整頓・清掃・臭気・害虫発生状況等',
+  '給水設備':         '目視点検による不具合箇所の確認。水漏れ、異音等',
+  'エレベーター':      '異常音・振動・点検中に清掃状況（マット・溝・他）',
+  '自動火災報知機':    '火災報知器の目視による不具合箇所の点検',
+  '駐車場・駐輪場':    '清掃状況や無断駐車の有無など（不具合・破損・故障がないか）',
+  '宅配ボックス':      '清掃状況並びに不具合・破損・故障等',
+  'タイマー':         '共用灯タイマーの状況（不具合・破損・故障等）',
+  'エントランス照明':  '点灯確認・故障の有無や清掃状況確認',
+  '廊下照明':         '点灯確認・故障の有無や清掃状況確認',
+  '階段照明':         '点灯確認・故障の有無や清掃状況確認',
+  '外灯':             '点灯確認・故障の有無や清掃状況確認',
+  'その他照明':        '点灯確認・故障の有無や清掃状況確認',
+  'セキュリティ':      '監視カメラ具合確認・門扉の施錠状況',
+  '粗大ごみ':         'シールが貼られていない物がないか',
+  '掲示板':           '過去の掲示物が無い・掲示物の整理',
+  '連絡ノートの記入状況': '連絡ノートの記入状況',
+  '管理員室':         '',
+};
+
+let DATA = [];  // パース済み全物件
+
+// ══════════════════════════════════════════
+// CSV パーサー
+// ══════════════════════════════════════════
+function parseCSVLine(line) {
+  const r = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (c === ',' && !inQ) { r.push(cur); cur = ''; }
+    else cur += c;
+  }
+  r.push(cur);
+  return r;
+}
+
+function parseBlock(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#PROPERTY,'));
+  let h = {}, notes = '', items = [];
+  for (const line of lines) {
+    if (line.startsWith('#JUNKAI,')) {
+      const c = parseCSVLine(line.slice(8));
+      h = { propertyNo: c[0]||'', propertyName: c[1]||'', mgmtCompany: c[2]||'', managerName: c[3]||'', patrolDate: c[4]||'' };
+    } else if (line.startsWith('#NOTES,')) {
+      notes = parseCSVLine(line.slice(7))[0] || '';
+    } else if (!line.startsWith('#') && !line.startsWith('大分類,')) {
+      const c = parseCSVLine(line);
+      if (c.length >= 3) items.push({ cat: c[0], label: c[1], status: c[2], report: c[3]||'' });
+    }
+  }
+  return { h, notes, items };
+}
+
+function parseAll(raw) {
+  // BEGIN/END タグ抽出（なくてもOK）
+  const m = raw.match(/===BEGIN CSV===([\s\S]*?)===END CSV===/);
+  let csv = m ? m[1] : raw;
+
+  // #JUNKAI が見つかる位置から開始（前のゴミテキストを除去）
+  const ji = csv.indexOf('#JUNKAI,');
+  const pi = csv.indexOf('#PROPERTY,');
+  const si = [ji, pi].filter(x => x >= 0);
+  if (si.length) csv = csv.slice(Math.min(...si));
+
+  // #NEXT で分割
+  const blocks = csv.split(/\n#NEXT(\n|$)/).filter(b => b.trim() && b.trim() !== '\n');
+  return blocks
+    .map(b => parseBlock(b))
+    .filter(d => d.h.propertyName || d.h.propertyNo || d.items.length > 0);
+}
+
+// ══════════════════════════════════════════
+// 生成ボタン
+// ══════════════════════════════════════════
+function generate() {
+  const raw = document.getElementById('csvIn').value;
+  const errEl = document.getElementById('errMsg');
+  const stEl  = document.getElementById('statusMsg');
+  errEl.style.display = 'none';
+  stEl.style.display  = 'none';
+
+  if (!raw.trim()) {
+    showErr('CSVを貼り付けてください。');
+    return;
+  }
+  if (raw.indexOf('#JUNKAI,') === -1) {
+    showErr('CSVデータが見つかりません。<br>メール本文に <b>#JUNKAI,</b> から始まるデータが含まれているか確認してください。<br>メール本文をそのまま全文コピーして貼り付けてください。');
+    return;
+  }
+
+  try {
+    DATA = parseAll(raw);
+    if (!DATA.length) { showErr('物件データを読み取れませんでした。'); return; }
+    renderList();
+    stEl.style.display = 'block';
+    stEl.textContent   = `✅ ${DATA.length}件 読み込み完了`;
+  } catch(e) {
+    showErr('パースエラー: ' + e.message);
+    console.error(e);
+  }
+}
+
+function showErr(html) {
+  const el = document.getElementById('errMsg');
+  el.style.display = 'block';
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// 物件リスト描画
+// ══════════════════════════════════════════
+function renderList() {
+  document.getElementById('listTitle').textContent = `${DATA.length}件 読み込みました`;
+  const wrap = document.getElementById('listWrap');
+  wrap.classList.add('show');
+  const el = document.getElementById('listItems');
+  el.innerHTML = '';
+  DATA.forEach((d, i) => {
+    const ok   = d.items.filter(r => r.status === '良好').length;
+    const warn = d.items.filter(r => r.status === '要指導').length;
+    const fix  = d.items.filter(r => r.status === '要改善').length;
+    const div  = document.createElement('div');
+    div.className = 'prop-card';
+    div.innerHTML = `
+      <div class="prop-info">
+        <div class="prop-name">${d.h.propertyName || '（建物名なし）'}</div>
+        <div class="prop-meta">No.${d.h.propertyNo}　${d.h.patrolDate}　${d.h.managerName}</div>
+        <div class="prop-badges">
+          <span class="bOk">○ 良好 ${ok}</span>
+          ${warn ? `<span class="bWarn">⚠ 要指導 ${warn}</span>` : ''}
+          ${fix  ? `<span class="bFix">✕ 要改善 ${fix}</span>`  : ''}
+        </div>
+      </div>
+      <div class="prop-btns">
+        <button class="bPdf" onclick="printOne(${i})">🖨 PDF保存・印刷</button>
+        <button class="bDoc" id="bDoc${i}" onclick="dlWord(${i})">📝 Word編集用</button>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════════════
+// 報告書 HTML 生成（雛形完全準拠）
+// ══════════════════════════════════════════
+function buildHTML(d) {
+  const h = d.h;
+  // カテゴリグループ化
+  const catMap = {}, catOrd = [];
+  d.items.forEach(it => {
+    if (!catMap[it.cat]) { catMap[it.cat] = []; catOrd.push(it.cat); }
+    catMap[it.cat].push(it);
+  });
+
+  let rows = '';
+  catOrd.forEach(cat => {
+    catMap[cat].forEach((it, idx) => {
+      const chk  = CK[it.label] || '';
+      const cls  = it.status === '要指導' ? 'ck-warn' : it.status === '要改善' ? 'ck-fix' : 'ck-ok';
+      const res  = it.status === '要指導' ? '要指導' : it.status === '要改善' ? '要改善' : '○ 良好';
+      const catTd = idx === 0
+        ? `<td class="ck-cat" rowspan="${catMap[cat].length}" style="width:12%">${cat.replace(/\//g, '/<br>')}</td>`
+        : '';
+      rows += `<tr>${catTd}
+        <td style="width:13%;vertical-align:top">${it.label}</td>
+        <td class="ck-chk">${chk}</td>
+        <td class="${cls}" style="width:9%">${res}</td>
+        <td style="width:17%;font-size:7.5pt;color:#333;vertical-align:top">${it.report || ''}</td>
+      </tr>`;
+    });
+  });
+
+  return `<div class="rp">
+  <div class="rp-title">定期巡回報告書</div>
+  <div class="rp-mgmt">${h.mgmtCompany || ''}</div>
+  <table class="rp-tbl">
+    <tr>
+      <td class="rp-lbl">物件番号</td><td class="rp-val">${h.propertyNo || ''}</td>
+      <td class="rp-lbl">巡回日</td><td class="rp-val">${h.patrolDate || ''}</td>
+    </tr>
+    <tr>
+      <td class="rp-lbl">建物名</td><td class="rp-val">${h.propertyName || ''}</td>
+      <td class="rp-lbl">報告者氏名</td><td class="rp-val">${h.managerName || ''}</td>
+    </tr>
+  </table>
+  <div class="rp-intro">下記の通りに定期巡回を行いましたので、御報告申し上げます。</div>
+  <table class="ck-tbl">
+    <thead><tr>
+      <th style="width:12%">大分類</th>
+      <th style="width:13%">項目</th>
+      <th>状況チェック</th>
+      <th style="width:9%">結果</th>
+      <th style="width:17%">報告</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="nt-lbl">処理実施内容及びその他報告内容</div>
+  <div class="nt-box">${d.notes || ''}</div>
+</div>`;
+}
+
+// ══════════════════════════════════════════
+// PDF：新タブで開いて印刷ダイアログ自動起動
+// ══════════════════════════════════════════
+// ライブラリロード済みフラグ
+let _libsLoaded = false;
+
+function loadPdfLibs() {
+  if (_libsLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s2.onload = () => { _libsLoaded = true; resolve(); };
+      s2.onerror = () => reject(new Error('jsPDFのロードに失敗しました'));
+      document.head.appendChild(s2);
+    };
+    s1.onerror = () => reject(new Error('html2canvasのロードに失敗しました'));
+    document.head.appendChild(s1);
+  });
+}
+
+function printOne(i) {
+  const d    = DATA[i];
+  // ボタン取得
+  const allBtns = document.querySelectorAll('.bPdf');
+  const btn = allBtns[i] || null;
+  if(btn){ btn.textContent='⏳ PDF生成中...'; btn.disabled=true; }
+  // 日付変換・ファイル名生成
+  function fmtDate(s){
+    var m = String(s||'').match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    if(!m) return String(s||'').replace(/[\/\\:*?"<>| ]/g,'');
+    return m[1]+('0'+m[2]).slice(-2)+('0'+m[3]).slice(-2);
+  }
+  function buildFname(h,ext){
+    var no=String(h.propertyNo||'').replace(/[\/\\:*?"<>| ]/g,'');
+    var nm=String(h.propertyName||'').replace(/[\/\\:*?"<>| ]/g,'');
+    var dt=fmtDate(h.patrolDate);
+    var mg=String(h.managerName||'').replace(/[\/\\:*?"<>| ]/g,'');
+    return no+nm+'_'+dt+'_'+mg+ext;
+  }
+
+  // 隠しエリアに報告書を描画
+  const pa = document.getElementById('printArea');
+  pa.innerHTML = buildHTML(d);
+  pa.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;width:794px;background:#fff;padding:49px;';
+
+  loadPdfLibs().then(() => {
+    return html2canvas(pa, { scale:2, useCORS:true, backgroundColor:'#ffffff', logging:false });
+  }).then(canvas => {
+    pa.style.display = 'none';
+    pa.innerHTML = '';
+
+    const { jsPDF } = window.jspdf;
+    const pdf  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const A4W  = 210, A4H = 297;
+    const imgD = canvas.toDataURL('image/jpeg', 0.95);
+    const imgH = canvas.height * A4W / canvas.width;
+
+    let y = 0;
+    while(y < imgH) {
+      if(y > 0) pdf.addPage();
+      pdf.addImage(imgD, 'JPEG', 0, -y, A4W, imgH);
+      y += A4H;
+    }
+
+    pdf.save(buildFname(d.h, '.pdf'));
+
+    if(btn){ btn.textContent='✅ PDF保存完了'; }
+    setTimeout(() => { if(btn){ btn.textContent='🖨 PDF保存・印刷'; btn.disabled=false; } }, 3000);
+  }).catch(e => {
+    pa.style.display = 'none'; pa.innerHTML = '';
+    console.error(e);
+    alert('PDF生成エラー:\n' + e.message + '\nインターネット接続を確認してください。');
+    if(btn){ btn.textContent='🖨 PDF保存・印刷'; btn.disabled=false; }
+  });
+}
+// ══════════════════════════════════════════
+// Word編集用：Wordで開けるHTMLをダウンロード
+// （ネット不要・確実に動作・編集可能）
+// ══════════════════════════════════════════
+function dlWord(i) {
+  const btn  = document.getElementById('bDoc' + i);
+  const d    = DATA[i];
+  const h    = d.h;
+  function fmtDate2(s){
+    var m=String(s||'').match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    if(!m) return String(s||'').replace(/[\/\\:*?"<>| ]/g,'');
+    return m[1]+('0'+m[2]).slice(-2)+('0'+m[3]).slice(-2);
+  }
+  function buildFname2(h,ext){
+    var no=String(h.propertyNo||'').replace(/[\/\\:*?"<>| ]/g,'');
+    var nm=String(h.propertyName||'').replace(/[\/\\:*?"<>| ]/g,'');
+    var dt=fmtDate2(h.patrolDate);
+    var mg=String(h.managerName||'').replace(/[\/\\:*?"<>| ]/g,'');
+    return no+nm+'_'+dt+'_'+mg+ext;
+  }
+
+  // カテゴリグループ化
+  const catMap = {}, catOrd = [];
+  d.items.forEach(it => {
+    if(!catMap[it.cat]){catMap[it.cat]=[];catOrd.push(it.cat);}
+    catMap[it.cat].push(it);
+  });
+
+  // チェック表の行（行高・フォントをWord向けに最適化）
+  let rows = '';
+  catOrd.forEach(cat => {
+    catMap[cat].forEach((it, idx) => {
+      const chk    = CK[it.label] || '';
+      const isW    = it.status === '要指導';
+      const isF    = it.status === '要改善';
+      const resBg  = isW ? 'background:#FFF3A0;' : isF ? 'background:#FFE0E0;' : '';
+      const resCol = isW ? 'color:#7d4e00;font-weight:bold;' : isF ? 'color:#a00000;font-weight:bold;' : '';
+      const resStr = isW ? '要指導' : isF ? '要改善' : '○ 良好';
+
+      // 大分類セル（rowspan・背景色）
+      const catTd = idx === 0
+        ? `<td rowspan="${catMap[cat].length}" style="width:12%;background:#F2F2F2;font-weight:bold;text-align:center;vertical-align:middle;font-size:7pt;padding:1pt 3pt;mso-line-height-rule:exactly;line-height:10pt;">${cat.replace(/\//g,'/')}</td>`
+        : '';
+
+      rows += `<tr style="height:14pt;mso-height-source:userset;">${catTd}
+        <td style="width:13%;font-size:7pt;padding:1pt 3pt;mso-line-height-rule:exactly;line-height:10pt;vertical-align:top;">${it.label}</td>
+        <td style="font-size:7pt;color:#444;padding:1pt 3pt;mso-line-height-rule:exactly;line-height:10pt;vertical-align:top;">${chk}</td>
+        <td style="width:9%;text-align:center;font-size:7pt;${resBg}${resCol}padding:1pt 3pt;mso-line-height-rule:exactly;line-height:10pt;vertical-align:top;">${resStr}</td>
+        <td style="width:17%;font-size:7pt;color:#333;padding:1pt 3pt;mso-line-height-rule:exactly;line-height:10pt;vertical-align:top;">${it.report || ''}</td>
+      </tr>`;
+    });
+  });
+
+  // Word用HTML（A4・余白・行高を厳密に指定）
+  const wordHTML = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+xmlns:w='urn:schemas-microsoft-com:office:word'
+xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<title>巡回報告書_${h.propertyName}_${h.patrolDate}</title>
+<!--[if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>90</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml><![endif]-->
+<style>
+<!--
+@page {
+  size:210mm 297mm;
+  margin:12mm 12mm 12mm 12mm;
+  mso-header-margin:0mm;
+  mso-footer-margin:0mm;
+}
+body {
+  font-family:'Meiryo',sans-serif;
+  font-size:8pt;
+  color:#000;
+  mso-line-height-rule:exactly;
+  line-height:11pt;
+}
+table {
+  border-collapse:collapse;
+  width:100%;
+  mso-table-lspace:0pt;
+  mso-table-rspace:0pt;
+}
+td,th {
+  border:0.5pt solid #888;
+  padding:1pt 3pt;
+  font-size:7pt;
+  vertical-align:top;
+  mso-line-height-rule:exactly;
+  line-height:10pt;
+}
+p { margin:0; padding:0; mso-line-height-rule:exactly; }
+-->
+</style>
+</head>
+<body>
+<!-- タイトル -->
+<p style="text-align:center;font-size:14pt;font-weight:bold;margin:0 0 3pt 0;letter-spacing:1pt;">定期巡回報告書</p>
+<!-- 管理会社 -->
+<p style="text-align:right;font-size:7.5pt;margin:0 0 2pt 0;">${h.mgmtCompany||''}</p>
+<!-- 物件情報 -->
+<table style="margin-bottom:3pt;">
+  <tr style="height:13pt;mso-height-source:userset;">
+    <td style="width:13%;background:#D9EAF7;font-weight:bold;text-align:center;font-size:7.5pt;vertical-align:middle;">物件番号</td>
+    <td style="width:28%;font-size:7.5pt;">${h.propertyNo||''}</td>
+    <td style="width:13%;background:#D9EAF7;font-weight:bold;text-align:center;font-size:7.5pt;vertical-align:middle;">巡回日</td>
+    <td style="width:28%;font-size:7.5pt;">${h.patrolDate||''}</td>
+  </tr>
+  <tr style="height:13pt;mso-height-source:userset;">
+    <td style="width:13%;background:#D9EAF7;font-weight:bold;text-align:center;font-size:7.5pt;vertical-align:middle;">建物名</td>
+    <td style="font-size:7.5pt;">${h.propertyName||''}</td>
+    <td style="width:13%;background:#D9EAF7;font-weight:bold;text-align:center;font-size:7.5pt;vertical-align:middle;">報告者氏名</td>
+    <td style="font-size:7.5pt;">${h.managerName||''}</td>
+  </tr>
+</table>
+<!-- 「下記の通り…」 -->
+<p style="font-size:8.5pt;font-weight:bold;margin:2pt 0 3pt 0;">下記の通りに定期巡回を行いましたので、御報告申し上げます。</p>
+<!-- チェック表 -->
+<table>
+  <thead>
+    <tr style="height:14pt;mso-height-source:userset;">
+      <th style="width:12%;background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;font-size:7.5pt;">大分類</th>
+      <th style="width:13%;background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;font-size:7.5pt;">項目</th>
+      <th style="background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;font-size:7.5pt;">状況チェック</th>
+      <th style="width:9%;background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;font-size:7.5pt;">結果</th>
+      <th style="width:17%;background:#1F4E78;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;font-size:7.5pt;">報告</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+<!-- 処理実施内容 -->
+<table style="margin-top:0;border-top:none;">
+  <tr>
+    <td style="font-size:8pt;font-weight:bold;border-bottom:none;padding:2pt 3pt;background:#fff;">処理実施内容及びその他報告内容</td>
+  </tr>
+  <tr style="height:50pt;mso-height-source:userset;">
+    <td style="font-size:8pt;vertical-align:top;padding:3pt;">${d.notes||''}</td>
+  </tr>
+</table>
+</body></html>`;
+
+  const blob = new Blob(['﻿' + wordHTML], {type:'application/msword;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = buildFname2(h, '.doc');
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  btn.textContent = '✅ ダウンロード完了';
+  setTimeout(() => { btn.textContent = '📝 Word編集用'; }, 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>定期巡回報告書</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hiragino Sans','Meiryo','Yu Gothic UI',sans-serif;background:#eef2f7;color:#1a2332;min-height:100vh;}
+
+/* トップバー */
+.topbar{background:#1a3a5c;color:#fff;padding:12px 16px 8px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.topbar-title{font-size:17px;font-weight:700;}
+.topbar-count{background:rgba(255,255,255,.2);border-radius:16px;padding:3px 12px;font-size:12px;font-weight:700;}
+.topbar-count span{color:#4fc3a1;font-size:15px;font-weight:800;}
+.summary-row{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:8px;}
+.chip{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.chip-良好  {background:rgba(79,195,161,.25);color:#4fc3a1;}
+.chip-要指導{background:rgba(245,158,11,.25);color:#fbbf24;}
+.chip-要改善{background:rgba(239,68,68,.25);color:#fca5a5;}
+
+/* 保存済みリスト */
+.saved-list{display:none;background:#0f2744;padding:8px 16px 10px;}
+.saved-list.show{display:block;}
+.saved-label{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:1px;margin-bottom:6px;}
+.saved-item{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.08);border-radius:8px;padding:7px 10px;margin-bottom:4px;}
+.saved-item-name{font-size:12px;color:#fff;font-weight:600;}
+.saved-item-meta{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px;}
+.saved-item-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.badge-ok {font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(79,195,161,.2);color:#4fc3a1;}
+.badge-ng {font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(239,68,68,.2);color:#fca5a5;}
+.saved-del{background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;}
+
+/* ボディ */
+.body{padding:12px 12px 20px;}
+.card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+.card-title{font-size:10px;color:#1a3a5c;font-weight:700;letter-spacing:1.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid #e8edf5;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.field-label{font-size:10px;color:#8090a0;display:block;margin-bottom:3px;}
+.field-input{width:100%;border:1.5px solid #dde3ec;border-radius:8px;padding:8px 10px;font-size:13px;background:#f7f9fc;outline:none;font-family:inherit;color:#1a2332;}
+.field-input:focus{border-color:#1a3a5c;}
+
+/* カテゴリタブ */
+.cat-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none;}
+.cat-tabs::-webkit-scrollbar{display:none;}
+.cat-tab{position:relative;padding:7px 13px;border-radius:20px;border:none;font-size:12px;font-family:inherit;white-space:nowrap;cursor:pointer;flex-shrink:0;background:#fff;color:#4a6080;box-shadow:0 1px 4px rgba(0,0,0,.08);font-weight:500;}
+.cat-tab.active{background:#1a3a5c;color:#fff;font-weight:700;}
+.cat-tab .badge{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:1.5px solid #fff;display:none;}
+.cat-tab.has-alert .badge{display:block;}
+
+/* 項目カード */
+.item-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 5px rgba(0,0,0,.07);border-left:4px solid #dde3ec;}
+.item-card.s-良好  {border-left-color:#4fc3a1;}
+.item-card.s-要指導{border-left-color:#f59e0b;}
+.item-card.s-要改善{border-left-color:#ef4444;}
+.item-label{font-size:13px;font-weight:700;color:#1a2332;margin-bottom:2px;}
+.item-check{font-size:10px;color:#94a3b8;line-height:1.4;margin-bottom:8px;}
+.status-btns{display:flex;gap:5px;flex-wrap:wrap;}
+.status-btn{padding:6px 12px;border-radius:20px;border:2px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:11px;cursor:pointer;font-family:inherit;font-weight:500;-webkit-tap-highlight-color:transparent;}
+.status-btn.sel-良好  {border-color:#4fc3a1;background:#e8faf5;color:#0e7a5a;font-weight:700;}
+.status-btn.sel-要指導{border-color:#f59e0b;background:#fffbeb;color:#b45309;font-weight:700;}
+.status-btn.sel-要改善{border-color:#ef4444;background:#fff1f1;color:#b91c1c;font-weight:700;}
+.report-ta{width:100%;margin-top:8px;border-radius:8px;padding:8px 10px;font-size:12px;resize:none;outline:none;font-family:inherit;color:#374151;line-height:1.5;display:none;}
+.report-ta.visible{display:block;}
+.report-ta.c-要指導{border:1.5px solid #f59e0b;background:#fffbeb;}
+.report-ta.c-要改善{border:1.5px solid #ef4444;background:#fff1f1;}
+.notes-ta{width:100%;border:1.5px solid #dde3ec;border-radius:10px;padding:10px 12px;font-size:13px;background:#f7f9fc;resize:none;outline:none;font-family:inherit;line-height:1.6;}
+
+/* ボタンエリア（ページ内） */
+.btn-area{padding:4px 0 8px;}
+.btn-add{
+  display:block;width:100%;padding:16px;border-radius:12px;
+  border:2.5px solid #1a3a5c;background:#fff;color:#1a3a5c;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
+  margin-bottom:10px;text-align:center;
+  -webkit-tap-highlight-color:rgba(26,58,92,.15);
+}
+.btn-send{
+  display:block;width:100%;padding:16px;border-radius:12px;border:none;
+  background:#1a3a5c;color:#fff;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;
+  -webkit-tap-highlight-color:rgba(255,255,255,.15);
+}
+.btn-send:disabled{opacity:.4;}
+
+/* トースト */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:12px 22px;border-radius:20px;font-size:13px;font-weight:700;white-space:nowrap;opacity:0;transition:opacity .25s;pointer-events:none;z-index:500;}
+.toast.show{opacity:1;}
+
+/* モーダル */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:flex-end;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal-box{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:8px;}
+.modal-list{max-height:200px;overflow-y:auto;margin-bottom:14px;}
+.modal-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;}
+.modal-item:last-child{border-bottom:none;}
+.modal-btns{display:flex;gap:8px;}
+.modal-ok{flex:2;padding:13px;border-radius:10px;border:none;background:#1a3a5c;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.modal-cancel{flex:1;padding:13px;border-radius:10px;border:2px solid #dde3ec;background:#fff;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+</style>
+</head>
+<body>
+
+<!-- トップバー -->
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="topbar-title">定期巡回報告書</div>
+    <div class="topbar-count">保存済 <span id="savedCount">0</span> 件</div>
+  </div>
+  <div class="summary-row" id="summaryRow"></div>
+  <div class="saved-list" id="savedList">
+    <div class="saved-label">▎ 本日の巡回リスト（タップで編集）</div>
+    <div id="savedItems"></div>
+  </div>
+</div>
+
+<div class="body">
+  <!-- 物件情報 -->
+  <div class="card">
+    <div class="card-title">▎ 物件情報</div>
+    <div class="grid2">
+      <div><label class="field-label">物件番号</label><input class="field-input" id="f-propertyNo" placeholder="1111"></div>
+      <div><label class="field-label">報告者氏名</label><input class="field-input" id="f-managerName" value="鈴木"></div>
+    </div>
+    <div style="margin-top:8px"><label class="field-label">建物名</label><input class="field-input" id="f-propertyName" placeholder="○○マンション"></div>
+    <div style="margin-top:8px"><label class="field-label">管理会社</label><input class="field-input" id="f-mgmtCompany" value="株式会社クレアスコミュニティー"></div>
+    <div style="margin-top:8px"><label class="field-label">巡回日</label><input class="field-input" id="f-patrolDate"></div>
+  </div>
+
+  <!-- カテゴリタブ -->
+  <div class="cat-tabs" id="catTabs"></div>
+  <div id="itemCards"></div>
+
+  <!-- 処理実施内容 -->
+  <div class="card" id="notesCard" style="display:none;">
+    <div class="card-title">▎ 処理実施内容及びその他報告内容</div>
+    <textarea class="notes-ta" id="f-notes" rows="4" placeholder="処理内容・特記事項を入力..."></textarea>
+  </div>
+
+  <!-- ボタン（ページ内・fixedなし） -->
+  <div class="btn-area">
+    <button class="btn-add" id="btnAdd">＋ この物件を追加して次へ</button>
+    <button class="btn-send" id="btnSend" disabled>📧 全件まとめてメール送信（<span id="sendCnt">0</span>件）</button>
+  </div>
+</div>
+
+<!-- 送信確認モーダル -->
+<div class="modal-bg" id="sendModal">
+  <div class="modal-box">
+    <div class="modal-title">📧 以下の物件をまとめて送信します</div>
+    <div class="modal-list" id="modalList"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="btnModalCancel">キャンセル</button>
+      <button class="modal-ok" id="btnModalOk">送信する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var CATEGORIES = [
+  { cat:'清掃関係', items:[
+    {key:'approach',  label:'アプローチ',    check:'館銘板・排水溝・床等'},
+    {key:'entrance',  label:'エントランス',   check:'天井・床・マット・レール溝等'},
+    {key:'mail',      label:'メールコーナー', check:'チラシ等が散乱または溢れていないか'},
+    {key:'corridor',  label:'廊下、階段',    check:'床・手摺・玄関周り・排水溝・腰壁等'},
+    {key:'unitEntry', label:'各戸玄関周り',  check:'玄関扉・インターフォン・PS扉等'},
+    {key:'exterior',  label:'建物外周',      check:'植え込み周り（植栽・雑草）水周り等'},
+    {key:'garbage',   label:'ゴミ置き場',    check:'整理整頓・清掃・臭気・害虫発生状況等'},
+  ]},
+  { cat:'設備関係', items:[
+    {key:'water',      label:'給水設備',        check:'目視点検による不具合箇所の確認。水漏れ、異音等'},
+    {key:'elevator',   label:'エレベーター',     check:'異常音・振動・点検中に清掃状況（マット・溝・他）'},
+    {key:'fireAlarm',  label:'自動火災報知機',   check:'火災報知器の目視による不具合箇所の点検'},
+    {key:'parking',    label:'駐車場・駐輪場',   check:'清掃状況や無断駐車の有無など（不具合・破損・故障がないか）'},
+    {key:'mailbox',    label:'宅配ボックス',     check:'清掃状況並びに不具合・破損・故障等'},
+    {key:'timer',      label:'タイマー',         check:'共用灯タイマーの状況（不具合・破損・故障等）'},
+    {key:'entLight',   label:'エントランス照明', check:'点灯確認・故障の有無や清掃状況確認'},
+    {key:'corrLight',  label:'廊下照明',         check:'点灯確認・故障の有無や清掃状況確認'},
+    {key:'stairLight', label:'階段照明',         check:'点灯確認・故障の有無や清掃状況確認'},
+    {key:'outLight',   label:'外灯',             check:'点灯確認・故障の有無や清掃状況確認'},
+    {key:'otherLight', label:'その他照明',       check:'点灯確認・故障の有無や清掃状況確認'},
+  ]},
+  { cat:'その他', items:[
+    {key:'security', label:'セキュリティ', check:'監視カメラ具合確認・門扉の施錠状況'},
+    {key:'bulky',    label:'粗大ごみ',    check:'シールが貼られていない物がないか'},
+    {key:'bulletin', label:'掲示板',      check:'過去の掲示物が無い・掲示物の整理'},
+  ]},
+  { cat:'清掃員/管理員関係', items:[
+    {key:'logbook',   label:'連絡ノートの記入状況', check:'連絡ノートの記入状況'},
+    {key:'bulbStock', label:'管理員室',             check:'管球の在庫チェック表の記載'},
+    {key:'cleaning',  label:'管理員室',             check:'整理整頓・清掃・私物等の状況'},
+    {key:'biz',       label:'管理員室',             check:'業務報告書の作成'},
+    {key:'post',      label:'管理員室',             check:'管理員室・管理組合ポストの確認'},
+  ]},
+];
+
+var ALL_ITEMS = [];
+for(var ci=0; ci<CATEGORIES.length; ci++){
+  var cat = CATEGORIES[ci];
+  for(var ii=0; ii<cat.items.length; ii++){
+    var item = cat.items[ii];
+    ALL_ITEMS.push({key:item.key, label:item.label, check:item.check, cat:cat.cat});
+  }
+}
+
+// ─── 状態（ES5互換） ──────────────────────────────────
+var statuses        = {};
+var reports         = {};
+var activeCat       = 0;
+var savedProperties = [];
+var editingIndex    = -1;
+
+function initStatuses(){
+  statuses = {};
+  reports  = {};
+  for(var i=0; i<ALL_ITEMS.length; i++){
+    statuses[ALL_ITEMS[i].key] = '良好';
+    reports[ALL_ITEMS[i].key]  = '';
+  }
+}
+initStatuses();
+
+// ─── 初期化 ──────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function(){
+  var d = new Date();
+  document.getElementById('f-patrolDate').value =
+    d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+
+  buildTabs();
+  renderItems();
+  updateSummary();
+
+  // ボタンイベント（clickのみ・シンプルに）
+  document.getElementById('btnAdd').addEventListener('click', function(){
+    addProperty();
+  });
+  document.getElementById('btnSend').addEventListener('click', function(){
+    showSendModal();
+  });
+  document.getElementById('btnModalCancel').addEventListener('click', function(){
+    closeSendModal();
+  });
+  document.getElementById('btnModalOk').addEventListener('click', function(){
+    sendAll();
+  });
+  document.getElementById('sendModal').addEventListener('click', function(e){
+    if(e.target === this) closeSendModal();
+  });
+});
+
+// ─── タブ ────────────────────────────────────────────
+function buildTabs(){
+  var wrap = document.getElementById('catTabs');
+  wrap.innerHTML = '';
+  for(var i=0; i<CATEGORIES.length; i++){
+    (function(idx){
+      var cat     = CATEGORIES[idx];
+      var hasAlt  = false;
+      for(var j=0; j<cat.items.length; j++){
+        if(statuses[cat.items[j].key] !== '良好'){ hasAlt=true; break; }
+      }
+      var btn = document.createElement('button');
+      btn.className = 'cat-tab' + (idx===activeCat?' active':'') + (hasAlt?' has-alert':'');
+      btn.innerHTML = cat.cat + '<span class="badge"></span>';
+      btn.addEventListener('click', function(){ switchCat(idx); });
+      wrap.appendChild(btn);
+    })(i);
+  }
+}
+
+function switchCat(idx){
+  activeCat = idx;
+  buildTabs();
+  renderItems();
+  document.getElementById('notesCard').style.display =
+    idx === CATEGORIES.length-1 ? 'block' : 'none';
+}
+
+// ─── 項目描画 ─────────────────────────────────────────
+function renderItems(){
+  var wrap = document.getElementById('itemCards');
+  wrap.innerHTML = '';
+  var items = CATEGORIES[activeCat].items;
+  for(var i=0; i<items.length; i++){
+    (function(item){
+      var s    = statuses[item.key];
+      var card = document.createElement('div');
+      card.className = 'item-card s-'+s;
+      card.id = 'card-'+item.key;
+
+      var btnsHTML = '';
+      var btnList  = ['良好','要指導','要改善'];
+      var lblList  = {'良好':'○ 良好','要指導':'⚠ 要指導','要改善':'✕ 要改善'};
+      for(var bi=0; bi<btnList.length; bi++){
+        var st  = btnList[bi];
+        var sel = (st===s) ? ' sel-'+st : '';
+        btnsHTML += '<button class="status-btn'+sel+'" data-key="'+item.key+'" data-val="'+st+'">'+lblList[st]+'</button>';
+      }
+
+      var taVis = s!=='良好' ? ' visible' : '';
+      var taCls = s!=='良好' ? ' c-'+s    : '';
+
+      card.innerHTML =
+        '<div class="item-label">'+item.label+'</div>'+
+        '<div class="item-check">'+item.check+'</div>'+
+        '<div class="status-btns">'+btnsHTML+'</div>'+
+        '<textarea class="report-ta'+taVis+taCls+'" rows="2" placeholder="報告内容を入力...">'+reports[item.key]+'</textarea>';
+
+      // ステータスボタンにイベント追加
+      var btnEls = card.querySelectorAll('.status-btn');
+      for(var k=0; k<btnEls.length; k++){
+        btnEls[k].addEventListener('click', function(){
+          setStatus(this.getAttribute('data-key'), this.getAttribute('data-val'));
+        });
+      }
+
+      // 報告テキストエリアにイベント追加
+      var ta = card.querySelector('.report-ta');
+      ta.addEventListener('input', function(){
+        reports[item.key] = this.value;
+      });
+
+      wrap.appendChild(card);
+    })(items[i]);
+  }
+}
+
+function setStatus(key, val){
+  statuses[key] = val;
+  if(val === '良好') reports[key] = '';
+
+  var card = document.getElementById('card-'+key);
+  if(!card) return;
+  card.className = 'item-card s-'+val;
+
+  var btnEls  = card.querySelectorAll('.status-btn');
+  var lblList = {'良好':'○ 良好','要指導':'⚠ 要指導','要改善':'✕ 要改善'};
+  for(var k=0; k<btnEls.length; k++){
+    var st  = btnEls[k].getAttribute('data-val');
+    btnEls[k].className = 'status-btn' + (st===val ? ' sel-'+val : '');
+  }
+
+  var ta = card.querySelector('.report-ta');
+  if(val !== '良好'){
+    ta.className = 'report-ta visible c-'+val;
+  } else {
+    ta.className = 'report-ta';
+    ta.value = '';
+  }
+
+  updateSummary();
+}
+
+function updateSummary(){
+  var ok=0, warn=0, fix=0;
+  for(var i=0; i<ALL_ITEMS.length; i++){
+    var s = statuses[ALL_ITEMS[i].key];
+    if(s==='良好') ok++;
+    else if(s==='要指導') warn++;
+    else if(s==='要改善') fix++;
+  }
+  document.getElementById('summaryRow').innerHTML =
+    '<span class="chip chip-良好">○ 良好 '+ok+'</span>'+
+    (warn ? '<span class="chip chip-要指導">⚠ 要指導 '+warn+'</span>' : '')+
+    (fix  ? '<span class="chip chip-要改善">✕ 要改善 '+fix+'</span>'  : '');
+  buildTabs();
+}
+
+// ─── 物件追加 ─────────────────────────────────────────
+function addProperty(){
+  var name = document.getElementById('f-propertyName').value.trim();
+  var no   = document.getElementById('f-propertyNo').value.trim();
+  if(!name && !no){
+    showToast('⚠ 建物名または物件番号を入力してください');
+    return;
+  }
+
+  // スナップショットを保存
+  var snapStatuses = {};
+  var snapReports  = {};
+  for(var i=0; i<ALL_ITEMS.length; i++){
+    var k = ALL_ITEMS[i].key;
+    snapStatuses[k] = statuses[k];
+    snapReports[k]  = reports[k];
+  }
+
+  var prop = {
+    header:{
+      propertyNo:   no,
+      propertyName: name,
+      mgmtCompany:  document.getElementById('f-mgmtCompany').value,
+      managerName:  document.getElementById('f-managerName').value,
+      patrolDate:   document.getElementById('f-patrolDate').value,
+    },
+    statuses: snapStatuses,
+    reports:  snapReports,
+    notes:    document.getElementById('f-notes').value,
+  };
+
+  if(editingIndex >= 0){
+    savedProperties[editingIndex] = prop;
+    editingIndex = -1;
+  } else {
+    savedProperties.push(prop);
+  }
+
+  // リスト更新
+  refreshSavedList();
+
+  // フォームリセット
+  document.getElementById('f-propertyNo').value   = '';
+  document.getElementById('f-propertyName').value = '';
+  document.getElementById('f-notes').value        = '';
+  document.getElementById('btnAdd').textContent   = '＋ この物件を追加して次へ';
+  initStatuses();
+  activeCat = 0;
+  buildTabs();
+  renderItems();
+  updateSummary();
+  window.scrollTo(0, 0);
+
+  showToast('✓ '+(name||no)+'を追加しました（計'+savedProperties.length+'件）');
+}
+
+// ─── 保存済みリスト更新 ───────────────────────────────
+function refreshSavedList(){
+  var cnt = savedProperties.length;
+  document.getElementById('savedCount').textContent = cnt;
+  document.getElementById('sendCnt').textContent    = cnt;
+  document.getElementById('btnSend').disabled       = (cnt === 0);
+
+  var listEl  = document.getElementById('savedList');
+  var itemsEl = document.getElementById('savedItems');
+
+  if(cnt === 0){ listEl.classList.remove('show'); return; }
+  listEl.classList.add('show');
+
+  var html = '';
+  for(var i=0; i<savedProperties.length; i++){
+    var p  = savedProperties[i];
+    var ng = 0;
+    for(var k in p.statuses){ if(p.statuses[k]!=='良好') ng++; }
+    var badge = ng>0
+      ? '<span class="badge-ng">⚠ '+ng+'件</span>'
+      : '<span class="badge-ok">○ 全良好</span>';
+    html +=
+      '<div class="saved-item" data-idx="'+i+'">'+
+        '<div>'+
+          '<div class="saved-item-name">'+(p.header.propertyName||p.header.propertyNo||'物件'+(i+1))+'</div>'+
+          '<div class="saved-item-meta">'+p.header.propertyNo+' / '+p.header.patrolDate+'</div>'+
+        '</div>'+
+        '<div class="saved-item-right">'+
+          badge+
+          '<button class="saved-del" data-delidx="'+i+'">×</button>'+
+        '</div>'+
+      '</div>';
+  }
+  itemsEl.innerHTML = html;
+
+  // タップで編集
+  var items = itemsEl.querySelectorAll('.saved-item');
+  for(var j=0; j<items.length; j++){
+    items[j].addEventListener('click', function(e){
+      if(e.target.className === 'saved-del') return;
+      editProperty(parseInt(this.getAttribute('data-idx')));
+    });
+  }
+  // ×で削除
+  var dels = itemsEl.querySelectorAll('.saved-del');
+  for(var d=0; d<dels.length; d++){
+    dels[d].addEventListener('click', function(e){
+      e.stopPropagation();
+      deleteProperty(parseInt(this.getAttribute('data-delidx')));
+    });
+  }
+}
+
+function editProperty(idx){
+  var p = savedProperties[idx];
+  editingIndex = idx;
+  document.getElementById('f-propertyNo').value    = p.header.propertyNo;
+  document.getElementById('f-propertyName').value  = p.header.propertyName;
+  document.getElementById('f-mgmtCompany').value   = p.header.mgmtCompany;
+  document.getElementById('f-managerName').value   = p.header.managerName;
+  document.getElementById('f-patrolDate').value    = p.header.patrolDate;
+  document.getElementById('f-notes').value         = p.notes || '';
+  for(var k in p.statuses){ statuses[k] = p.statuses[k]; }
+  for(var k in p.reports ){ reports[k]  = p.reports[k];  }
+  activeCat = 0;
+  buildTabs(); renderItems(); updateSummary();
+  document.getElementById('btnAdd').textContent =
+    '✏ '+(p.header.propertyName||'物件'+(idx+1))+' を更新して戻る';
+  window.scrollTo(0, 0);
+}
+
+function deleteProperty(idx){
+  if(editingIndex === idx){ editingIndex = -1; }
+  savedProperties.splice(idx, 1);
+  refreshSavedList();
+  showToast('削除しました');
+}
+
+// ─── CSV生成 ──────────────────────────────────────────
+function q(s){ return '"'+String(s||'').replace(/"/g,'""')+'"'; }
+
+function buildAllCSV(){
+  var sections = [];
+  for(var i=0; i<savedProperties.length; i++){
+    var p = savedProperties[i];
+    var h = p.header;
+    var rows = [
+      '#PROPERTY,'+(i+1),
+      '#JUNKAI,'+[h.propertyNo,h.propertyName,h.mgmtCompany,h.managerName,h.patrolDate].map(q).join(','),
+      '#NOTES,'+q(p.notes||''),
+      '大分類,項目,結果,報告'
+    ];
+    for(var j=0; j<ALL_ITEMS.length; j++){
+      var it = ALL_ITEMS[j];
+      rows.push([it.cat,it.label,p.statuses[it.key]||'良好',p.reports[it.key]||''].map(q).join(','));
+    }
+    sections.push(rows.join('\n'));
+  }
+  return sections.join('\n#NEXT\n');
+}
+
+// ─── 送信モーダル ─────────────────────────────────────
+function showSendModal(){
+  if(savedProperties.length === 0){ showToast('物件を追加してください'); return; }
+  var html = '';
+  for(var i=0; i<savedProperties.length; i++){
+    var p  = savedProperties[i];
+    var ng = 0;
+    for(var k in p.statuses){ if(p.statuses[k]!=='良好') ng++; }
+    html += '<div class="modal-item">'+
+      '<span>'+(p.header.propertyName||'物件'+(i+1))+' ('+p.header.propertyNo+')</span>'+
+      '<span style="color:'+(ng>0?'#b91c1c':'#0e7a5a')+';font-weight:700;">'+(ng>0?'⚠ '+ng+'件':'○ 全良好')+'</span>'+
+    '</div>';
+  }
+  document.getElementById('modalList').innerHTML = html;
+  document.getElementById('sendModal').classList.add('open');
+}
+function closeSendModal(){
+  document.getElementById('sendModal').classList.remove('open');
+}
+
+// ─── 全件送信（画面表示方式・セキュリティ制限対応） ──
+function sendAll(){
+  closeSendModal();
+  var csv      = buildAllCSV();
+  var fullText = '===BEGIN CSV===\n'+csv+'\n===END CSV===';
+  var date     = savedProperties[0] ? savedProperties[0].header.patrolDate : '';
+  var subject  = '【定期巡回報告書】'+date+'　全'+savedProperties.length+'件';
+
+  // 画面にCSVを表示して手動コピーしてもらう
+  showCSVPanel(fullText, subject);
+}
+
+function showCSVPanel(fullText, subject){
+  // 既存パネルがあれば削除
+  var old = document.getElementById('csvPanel');
+  if(old) old.parentNode.removeChild(old);
+
+  var panel = document.createElement('div');
+  panel.id  = 'csvPanel';
+  panel.style.cssText =
+    'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;'+
+    'display:flex;flex-direction:column;padding:16px;';
+
+  panel.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:16px;display:flex;flex-direction:column;height:100%;max-height:100%;">'+
+      '<div style="font-size:15px;font-weight:700;color:#1a3a5c;margin-bottom:6px;">📋 CSVデータを送信</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6;">'+
+        '① 下のテキストを<b>長押し→すべて選択→コピー</b><br>'+
+        '② Gmailを開いて<b>新規作成→本文に貼り付け→送信</b><br>'+
+        '宛先: k-masumura / n-kumagai @clearthlifegrp.jp'+
+      '</div>'+
+      '<div style="font-size:11px;font-weight:700;color:#1a3a5c;margin-bottom:4px;">件名：'+subject+'</div>'+
+      '<textarea id="csvText" readonly '+
+        'style="flex:1;width:100%;border:2px solid #1a3a5c;border-radius:8px;'+
+        'padding:10px;font-size:11px;font-family:monospace;resize:none;'+
+        'background:#f7fafc;color:#1a2332;min-height:0;">'+
+        fullText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+
+      '</textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;">'+
+        '<button id="btnSelectAll" '+
+          'style="flex:1;padding:13px;border-radius:10px;border:none;'+
+          'background:#1a3a5c;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">'+
+          '全選択する'+
+        '</button>'+
+        '<button id="btnClosePanel" '+
+          'style="padding:13px 16px;border-radius:10px;border:2px solid #dde3ec;'+
+          'background:#fff;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;">'+
+          '閉じる'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+
+  document.body.appendChild(panel);
+
+  // テキストエリアを自動選択
+  var ta = document.getElementById('csvText');
+  ta.addEventListener('click', function(){ this.select(); this.setSelectionRange(0, 99999); });
+  ta.addEventListener('touchstart', function(){ this.select(); this.setSelectionRange(0, 99999); });
+
+  // 「全選択する」ボタン
+  document.getElementById('btnSelectAll').addEventListener('click', function(){
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    // クリップボードコピーも試みる（成功すればラッキー）
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(ta.value).then(function(){
+          document.getElementById('btnSelectAll').textContent = '✅ コピー完了！';
+        }).catch(function(){
+          document.getElementById('btnSelectAll').textContent = '✅ 選択完了';
+        });
+      } else {
+        document.execCommand('copy');
+        document.getElementById('btnSelectAll').textContent = '✅ コピー完了！';
+      }
+    } catch(e){
+      document.getElementById('btnSelectAll').textContent = '✅ 選択完了（手動コピーを）';
+    }
+  });
+
+  // 「閉じる」ボタン
+  document.getElementById('btnClosePanel').addEventListener('click', function(){
+    document.body.removeChild(panel);
+  });
+
+  // 自動で全選択
+  setTimeout(function(){
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+  }, 300);
+}
+
+// ─── トースト ─────────────────────────────────────────
+var _toastTimer = null;
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if(_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3500);
+}
+</script>
+</body>
+</html>
