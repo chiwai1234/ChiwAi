@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>巡回員別 進捗確認 | ChiwAi</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:24px 16px 48px;
+    background:#f7f1eb;
+    color:#5b341d;
+    font-family:
+    "Hiragino Maru Gothic ProN",
+    "Arial Rounded MT Bold",
+    "Yu Gothic",
+    sans-serif;
+}
+
+.container{
+    max-width:720px;
+    margin:auto;
+}
+
+.header{
+    text-align:center;
+    margin-bottom:24px;
+}
+
+.header .company{
+    font-size:16px;
+    color:#9c6c50;
+    letter-spacing:1px;
+    margin-bottom:6px;
+}
+
+.header .title{
+    font-size:26px;
+    font-weight:bold;
+    color:#7a4a2d;
+}
+
+.line{
+    width:90px;
+    height:4px;
+    background:#f4a8b8;
+    border-radius:999px;
+    margin:14px auto 0;
+}
+
+.card{
+    background:#fff;
+    border:2px solid #f2c8d2;
+    border-radius:28px;
+    padding:24px 22px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.06);
+    margin-bottom:20px;
+}
+
+/* サマリー */
+.summary{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.summary .stat{
+    flex:1;
+    min-width:120px;
+    background:#fff7f8;
+    border:1px solid #f7d7de;
+    border-radius:18px;
+    padding:16px;
+    text-align:center;
+}
+
+.summary .stat .num{
+    font-size:30px;
+    font-weight:bold;
+    color:#f28ca0;
+    line-height:1.2;
+}
+
+.summary .stat .label{
+    font-size:12px;
+    color:#9c6c50;
+    margin-top:4px;
+}
+
+/* 巡回員カード */
+.inspector{
+    background:#fff;
+    border:2px solid #f2c8d2;
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 8px 22px rgba(0,0,0,0.05);
+    margin-bottom:18px;
+}
+
+.inspector-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+}
+
+.avatar{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#f59aaa,#f28ca0);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    flex-shrink:0;
+}
+
+.inspector-name{
+    font-size:19px;
+    font-weight:bold;
+    color:#7a4a2d;
+}
+
+.inspector-meta{
+    font-size:12px;
+    color:#9c6c50;
+    margin-top:2px;
+}
+
+.progress-wrap{
+    margin:12px 0 4px;
+}
+
+.progress-bar{
+    height:14px;
+    background:#f3e6e6;
+    border-radius:999px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    background:linear-gradient(135deg,#8fd6a8,#5fc98a);
+    border-radius:999px;
+    transition:width .4s ease;
+}
+
+.progress-fill.mid{
+    background:linear-gradient(135deg,#f6d06b,#f2b84a);
+}
+
+.progress-fill.low{
+    background:linear-gradient(135deg,#f59aaa,#f28ca0);
+}
+
+.progress-text{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:#9c6c50;
+    margin-top:6px;
+}
+
+/* 巡回箇所リスト */
+.spots{
+    list-style:none;
+    margin:14px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.spot{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:#fff7f8;
+    border:1px solid #f7d7de;
+    border-radius:14px;
+    padding:10px 12px;
+}
+
+.spot input[type=checkbox]{
+    width:20px;
+    height:20px;
+    accent-color:#5fc98a;
+    flex-shrink:0;
+    cursor:pointer;
+}
+
+.spot .spot-name{
+    flex:1;
+    font-size:15px;
+}
+
+.spot.done .spot-name{
+    text-decoration:line-through;
+    color:#b79b8b;
+}
+
+.spot .spot-time{
+    font-size:11px;
+    color:#9c6c50;
+    white-space:nowrap;
+}
+
+.spot .del{
+    border:none;
+    background:none;
+    color:#e08aa0;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:2px 4px;
+}
+
+/* 追加フォーム */
+.add-spot{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+}
+
+.add-spot input{
+    flex:1;
+    border:1px solid #f2c8d2;
+    border-radius:12px;
+    padding:9px 12px;
+    font-size:14px;
+    font-family:inherit;
+    color:#5b341d;
+}
+
+.add-spot input:focus{
+    outline:none;
+    border-color:#f28ca0;
+}
+
+.btn{
+    border:none;
+    background:linear-gradient(135deg,#f59aaa,#f28ca0);
+    color:#fff;
+    padding:9px 16px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:bold;
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow:0 6px 14px rgba(245,154,170,0.3);
+}
+
+.btn.ghost{
+    background:#fff;
+    color:#e08aa0;
+    border:1px solid #f2c8d2;
+    box-shadow:none;
+}
+
+.btn:active{
+    transform:translateY(1px);
+}
+
+.inspector-foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:14px;
+}
+
+.remove-inspector{
+    border:none;
+    background:none;
+    color:#c99;
+    font-size:12px;
+    cursor:pointer;
+    font-family:inherit;
+}
+
+/* 巡回員追加 */
+.add-inspector{
+    display:flex;
+    gap:8px;
+}
+
+.add-inspector input{
+    flex:1;
+    border:1px solid #f2c8d2;
+    border-radius:12px;
+    padding:11px 14px;
+    font-size:15px;
+    font-family:inherit;
+    color:#5b341d;
+}
+
+.add-inspector input:focus{
+    outline:none;
+    border-color:#f28ca0;
+}
+
+.section-label{
+    font-size:14px;
+    font-weight:bold;
+    color:#9c6c50;
+    margin-bottom:12px;
+}
+
+.empty{
+    text-align:center;
+    color:#b79b8b;
+    font-size:14px;
+    padding:10px 0;
+}
+
+.updated{
+    text-align:center;
+    font-size:11px;
+    color:#b79b8b;
+    margin-top:8px;
+}
+
+.back{
+    display:inline-block;
+    margin-top:20px;
+    color:#8f6a56;
+    font-size:13px;
+    text-decoration:none;
+}
+
+@media(max-width:480px){
+    .summary .stat{
+        min-width:90px;
+    }
+    .inspector-name{
+        font-size:17px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+    <div class="company">ChiwAi</div>
+    <div class="title">巡回員別 進捗確認</div>
+    <div class="line"></div>
+</div>
+
+<!-- サマリー -->
+<div class="card">
+    <div class="summary" id="summary"></div>
+</div>
+
+<!-- 巡回員リスト -->
+<div id="inspectors"></div>
+
+<!-- 巡回員追加 -->
+<div class="card">
+    <div class="section-label">巡回員を追加</div>
+    <div class="add-inspector">
+        <input type="text" id="newInspector" placeholder="巡回員の名前" maxlength="20">
+        <button class="btn" onclick="addInspector()">追加</button>
+    </div>
+    <div class="updated" id="updated"></div>
+</div>
+
+<div style="text-align:center;">
+    <a class="back" href="index.html">← ChiwAiトップへ戻る</a>
+</div>
+
+</div>
+
+<script>
+const STORE_KEY = "chiwai_patrol_v1";
+
+/* 初期サンプルデータ */
+const seed = [
+    {
+        id: uid(),
+        name: "田中 さくら",
+        spots: [
+            { id: uid(), name: "新宿アイランドタワー 2F", done: true,  at: "09:12" },
+            { id: uid(), name: "西口ドッグラン",           done: true,  at: "09:48" },
+            { id: uid(), name: "中央公園 巡回路",           done: false, at: "" },
+            { id: uid(), name: "北広場 給水スポット",       done: false, at: "" }
+        ]
+    },
+    {
+        id: uid(),
+        name: "佐藤 健",
+        spots: [
+            { id: uid(), name: "東口エリア 見回り",   done: true,  at: "08:55" },
+            { id: uid(), name: "南通り ペットカフェ前", done: false, at: "" },
+            { id: uid(), name: "河川敷 散歩コース",     done: false, at: "" }
+        ]
+    }
+];
+
+let state = load();
+
+function uid(){
+    return Math.random().toString(36).slice(2, 9);
+}
+
+function load(){
+    try{
+        const raw = localStorage.getItem(STORE_KEY);
+        if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return JSON.parse(JSON.stringify(seed));
+}
+
+function save(){
+    try{
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }catch(e){}
+    stampUpdated();
+}
+
+function nowTime(){
+    const d = new Date();
+    return String(d.getHours()).padStart(2,"0") + ":" +
+           String(d.getMinutes()).padStart(2,"0");
+}
+
+function stampUpdated(){
+    const d = new Date();
+    document.getElementById("updated").textContent =
+        "最終更新 " +
+        d.toLocaleDateString("ja-JP") + " " + nowTime();
+}
+
+/* 操作 */
+function addInspector(){
+    const el = document.getElementById("newInspector");
+    const name = el.value.trim();
+    if(!name) return;
+    state.push({ id: uid(), name: name, spots: [] });
+    el.value = "";
+    save();
+    render();
+}
+
+function removeInspector(id){
+    if(!confirm("この巡回員を削除しますか？")) return;
+    state = state.filter(i => i.id !== id);
+    save();
+    render();
+}
+
+function addSpot(inspectorId, inputEl){
+    const name = inputEl.value.trim();
+    if(!name) return;
+    const insp = state.find(i => i.id === inspectorId);
+    if(!insp) return;
+    insp.spots.push({ id: uid(), name: name, done: false, at: "" });
+    inputEl.value = "";
+    save();
+    render();
+}
+
+function toggleSpot(inspectorId, spotId){
+    const insp = state.find(i => i.id === inspectorId);
+    if(!insp) return;
+    const spot = insp.spots.find(s => s.id === spotId);
+    if(!spot) return;
+    spot.done = !spot.done;
+    spot.at = spot.done ? nowTime() : "";
+    save();
+    render();
+}
+
+function removeSpot(inspectorId, spotId){
+    const insp = state.find(i => i.id === inspectorId);
+    if(!insp) return;
+    insp.spots = insp.spots.filter(s => s.id !== spotId);
+    save();
+    render();
+}
+
+/* 描画 */
+function progressOf(insp){
+    const total = insp.spots.length;
+    const done = insp.spots.filter(s => s.done).length;
+    const pct = total === 0 ? 0 : Math.round(done / total * 100);
+    return { total, done, pct };
+}
+
+function esc(s){
+    return String(s).replace(/[&<>"]/g, c =>
+        ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+
+function render(){
+    renderSummary();
+    renderInspectors();
+}
+
+function renderSummary(){
+    let totalSpots = 0, doneSpots = 0, completed = 0;
+    state.forEach(insp => {
+        const p = progressOf(insp);
+        totalSpots += p.total;
+        doneSpots += p.done;
+        if(p.total > 0 && p.done === p.total) completed++;
+    });
+    const overall = totalSpots === 0 ? 0 : Math.round(doneSpots / totalSpots * 100);
+
+    document.getElementById("summary").innerHTML = `
+        <div class="stat">
+            <div class="num">${state.length}</div>
+            <div class="label">巡回員</div>
+        </div>
+        <div class="stat">
+            <div class="num">${completed}</div>
+            <div class="label">完了した巡回員</div>
+        </div>
+        <div class="stat">
+            <div class="num">${doneSpots}/${totalSpots}</div>
+            <div class="label">巡回箇所</div>
+        </div>
+        <div class="stat">
+            <div class="num">${overall}%</div>
+            <div class="label">全体進捗</div>
+        </div>
+    `;
+}
+
+function fillClass(pct){
+    if(pct >= 100) return "";
+    if(pct >= 50) return "mid";
+    return "low";
+}
+
+function renderInspectors(){
+    const wrap = document.getElementById("inspectors");
+    if(state.length === 0){
+        wrap.innerHTML = `<div class="card"><div class="empty">巡回員が登録されていません。<br>下のフォームから追加してください。</div></div>`;
+        return;
+    }
+
+    wrap.innerHTML = state.map(insp => {
+        const p = progressOf(insp);
+        const initial = esc(insp.name.charAt(0) || "?");
+
+        const spotsHtml = insp.spots.length === 0
+            ? `<div class="empty">巡回箇所がありません</div>`
+            : insp.spots.map(s => `
+                <li class="spot ${s.done ? "done" : ""}">
+                    <input type="checkbox" ${s.done ? "checked" : ""}
+                        onchange="toggleSpot('${insp.id}','${s.id}')">
+                    <span class="spot-name">${esc(s.name)}</span>
+                    ${s.done && s.at ? `<span class="spot-time">✓ ${esc(s.at)}</span>` : ""}
+                    <button class="del" title="削除"
+                        onclick="removeSpot('${insp.id}','${s.id}')">×</button>
+                </li>
+            `).join("");
+
+        return `
+        <div class="inspector">
+            <div class="inspector-head">
+                <div class="avatar">${initial}</div>
+                <div>
+                    <div class="inspector-name">${esc(insp.name)}</div>
+                    <div class="inspector-meta">${p.done} / ${p.total} 箇所 完了</div>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill ${fillClass(p.pct)}" style="width:${p.pct}%"></div>
+                </div>
+                <div class="progress-text">
+                    <span>${p.pct === 100 && p.total > 0 ? "🎉 巡回完了" : "巡回中"}</span>
+                    <span>${p.pct}%</span>
+                </div>
+            </div>
+
+            <ul class="spots">${spotsHtml}</ul>
+
+            <div class="add-spot">
+                <input type="text" placeholder="巡回箇所を追加" maxlength="40"
+                    onkeydown="if(event.key==='Enter'){addSpot('${insp.id}', this)}">
+                <button class="btn ghost"
+                    onclick="addSpot('${insp.id}', this.previousElementSibling)">追加</button>
+            </div>
+
+            <div class="inspector-foot">
+                <span></span>
+                <button class="remove-inspector"
+                    onclick="removeInspector('${insp.id}')">巡回員を削除</button>
+            </div>
+        </div>
+        `;
+    }).join("");
+}
+
+/* Enterキーで巡回員追加 */
+document.getElementById("newInspector").addEventListener("keydown", e => {
+    if(e.key === "Enter") addInspector();
+});
+
+stampUpdated();
+render();
+</script>
+
+</body>
+</html>
